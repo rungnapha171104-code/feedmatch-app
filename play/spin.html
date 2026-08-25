@@ -48,17 +48,22 @@
 
             <!-- Action Area -->
             <div class="w-full">
-                <!-- Initial Button -->
-                <button id="spin-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold py-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                <!-- Initial Button (Host Only) -->
+                <button id="spin-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold py-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hidden">
                     เริ่มสุ่มเลย!
                 </button>
+
+                <!-- Waiting for Host Message -->
+                <div id="waiting-host-msg" class="w-full text-center py-4 text-gray-500 font-medium hidden">
+                    รอหัวห้องเริ่มสุ่ม...
+                </div>
 
                 <!-- Hidden initially, shown when result is picked -->
                 <div id="action-buttons" class="w-full hidden flex-col gap-4">
                     <a href="../play/map_navigation.html" class="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold py-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
                         ตำแหน่งที่ตั้ง
                     </a>
-                    <button id="reset-btn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-lg font-bold py-4 rounded-xl transition-all duration-300">
+                    <button id="reset-btn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-lg font-bold py-4 rounded-xl transition-all duration-300 hidden">
                         สุ่มใหม่
                     </button>
                 </div>
@@ -86,11 +91,14 @@
         const actionButtons = document.getElementById('action-buttons');
         const resultText = document.getElementById('spin-result');
         const viewListLink = document.getElementById('view-list-link');
+        const waitingHostMsg = document.getElementById('waiting-host-msg');
 
         let spinInterval;
         let finalMatch = null;
         let finalMatchId = null;
         let candidates = ["กำลังโหลดข้อมูล..."];
+        let isHost = false;
+        let roomChannel;
 
         // Initialize data
         document.addEventListener('DOMContentLoaded', async () => {
@@ -152,6 +160,20 @@
             const { data: { session } } = await supabaseClient.auth.getSession();
             let currentUser = session ? session.user : null;
 
+            // Fetch room host
+            const { data: roomData } = await supabaseClient
+                .from('rooms')
+                .select('host_id')
+                .eq('id', roomId)
+                .single();
+            
+            if (roomData && currentUser && roomData.host_id === currentUser.id) {
+                isHost = true;
+                spinBtn.classList.remove('hidden');
+            } else {
+                waitingHostMsg.classList.remove('hidden');
+            }
+
             // Optional: Update the link text dynamically based on the total likes in the room
             const { count } = await supabaseClient
                 .from('swipes')
@@ -160,8 +182,6 @@
                 .eq('is_liked', true);
             
             if (count !== null) {
-                // Since multiple people can like the same place, 'count' is total swipes. 
-                // We'll just show the static text for now, or just the number of total swipes.
                 viewListLink.textContent = `ดูผลโหวตของทั้งห้อง (${count} โหวต)`;
             }
 
@@ -176,20 +196,44 @@
             const closeBtn = document.getElementById('close-btn');
             closeBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                // Just go back to main menu. Data remains so history can display it.
                 window.location.href = '../room/main.html';
             });
+
+            // Set up Realtime for spins
+            roomChannel = supabaseClient.channel('spin_room_' + roomId);
+            roomChannel.on('broadcast', { event: 'spin_start' }, (payload) => {
+                startSpinningAnimation(payload.winnerId);
+            }).subscribe();
         });
 
         spinBtn.addEventListener('click', () => {
-            if (!finalMatch) {
-                alert("เกิดข้อผิดพลาดในการโหลดผลลัพธ์ หรือยังไม่มีผลลัพธ์");
-                return;
-            }
+            if (!finalMatch || !isHost) return;
+            
+            // Broadcast the event to others
+            roomChannel.send({
+                type: 'broadcast',
+                event: 'spin_start',
+                payload: { winnerId: finalMatchId }
+            });
+
+            // Start locally
+            startSpinningAnimation(finalMatchId);
+        });
+
+        function startSpinningAnimation(winnerId) {
+            // Find the winner from candidates or fallback to finalMatch
+            const winner = candidates.find(c => c.id === winnerId) || finalMatch;
+            finalMatch = winner;
+            finalMatchId = winner.id;
 
             // Hide initial elements
             spinBtn.classList.add('hidden');
+            waitingHostMsg.classList.add('hidden');
             viewListLink.classList.add('hidden');
+            
+            // Hide action buttons during spin
+            actionButtons.classList.add('hidden');
+            actionButtons.classList.remove('flex');
             
             // Reset text styling
             resultText.classList.remove('text-orange-500', 'scale-110');
@@ -211,7 +255,7 @@
                     finishSpin();
                 }
             }, speed);
-        });
+        }
 
         function finishSpin() {
             // Animate winner text
@@ -232,6 +276,12 @@
             // Show action buttons
             actionButtons.classList.remove('hidden');
             actionButtons.classList.add('flex');
+
+            if (isHost) {
+                resetBtn.classList.remove('hidden');
+            } else {
+                resetBtn.classList.add('hidden');
+            }
 
             // Trigger confetti
             triggerConfetti();
@@ -275,6 +325,7 @@
 
         resetBtn.addEventListener('click', async (e) => {
             e.preventDefault();
+            if (!isHost) return;
             
             // Remove the current winner from candidates
             candidates = candidates.filter(c => c.id !== finalMatchId);
@@ -284,42 +335,25 @@
                 return;
             }
 
-            // Hide action buttons and trigger spin animation again
-            actionButtons.classList.add('hidden');
-            actionButtons.classList.remove('flex');
-            resultText.classList.remove('text-orange-500', 'scale-110');
-            resultText.classList.add('text-gray-800');
-
-            let counter = 0;
-            const maxSpins = 30; // number of rapid changes
-            const speed = 70; // ms between changes
-
             // Pick a new winner randomly from remaining candidates
             const newWinner = candidates[Math.floor(Math.random() * candidates.length)];
             
-            // Update DB so others see the new match too
+            // Update DB so others see the new match too if they reload
             if (roomId) {
                 await supabaseClient.from('matches')
                     .update({ restaurant_id: newWinner.id })
                     .eq('room_id', roomId);
             }
 
-            // Update local variables
-            finalMatch = newWinner; 
-            finalMatchId = newWinner.id;
+            // Broadcast the event
+            roomChannel.send({
+                type: 'broadcast',
+                event: 'spin_start',
+                payload: { winnerId: newWinner.id }
+            });
 
-            spinInterval = setInterval(() => {
-                // Pick a random item just for visual spinning
-                let randomItem = candidates[Math.floor(Math.random() * candidates.length)];
-                resultText.textContent = randomItem.name;
-                
-                counter++;
-                
-                if (counter >= maxSpins) {
-                    clearInterval(spinInterval);
-                    finishSpin(); // Uses finalMatch.name
-                }
-            }, speed);
+            // Start locally
+            startSpinningAnimation(newWinner.id);
         });
     </script>
 </body>
