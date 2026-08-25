@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>โปรไฟล์ของฉัน - FeedMatch</title>
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+        <style>
+        body {
+            font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+        }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+        </style>
+    <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-800">
+
+    <!-- Standard Header -->
+    <header class="w-full bg-white shadow-sm px-8 py-4 relative z-20 flex justify-between items-center shrink-0">
+        <!-- Left: Logo -->
+        <div class="flex items-center">
+            <img src="../assets/images/Logoremovebg.png" alt="FeedMatch Logo" class="h-16 w-auto object-contain">
+        </div>
+
+    <!-- Right: Close Button -->
+    <a href="../room/main.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 transition-colors duration-200">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+</a>
+</header>
+
+<!-- Main Content Container -->
+<main class="max-w-3xl mx-auto px-4 mt-8">
+
+    <!-- 2. Profile Header Card -->
+    <div class="bg-white rounded-2xl shadow-sm p-8 flex flex-col items-center border border-gray-100">
+        <div class="relative mb-4">
+            <!-- Avatar -->
+            <div id="user-avatar" class="w-24 h-24 bg-orange-100 text-orange-600 flex items-center justify-center text-3xl font-bold rounded-full">
+                    U
+            </div>
+
+    </div>
+<h2 id="user-name" class="text-2xl font-bold text-gray-800">กำลังโหลด...</h2>
+<p id="user-email" class="text-gray-500 mt-1">...</p>
+<a href="../user/edit_profile.html" class="inline-block border border-gray-300 text-gray-700 px-6 py-2 rounded-lg mt-4 hover:bg-gray-50 transition-colors font-medium">
+                แก้ไขโปรไฟล์
+</a>
+</div>
+
+
+
+<!-- 4. Account Settings Section -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden mt-6 border border-gray-100">
+    <!-- Item 1 -->
+    <a href="../auth/change_password.html" class="flex justify-between items-center px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors block">
+        <span class="font-medium text-gray-700">เปลี่ยนรหัสผ่าน</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-gray-400">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+</a>
+</div>
+
+<!-- 5. Log Out Section -->
+<a href="#" id="logout-btn" class="mt-8 mb-12 bg-red-50 text-red-600 border border-red-200 font-bold py-4 rounded-xl text-center cursor-pointer hover:bg-red-100 transition block">
+            ออกจากระบบ
+</a>
+
+</main>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/supabase-config.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Fetch current user session
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) {
+            window.location.href = '../index.html';
+            return;
+        }
+
+        const user = session.user;
+        document.getElementById('user-email').textContent = user.email;
+
+        // Fetch profile data
+        const { data: profile, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        let currentRestrictions = [];
+        let currentPriceLevels = [];
+        let avatarBase64 = null;
+
+        // Fallback defaults: try user_metadata first, then email
+        let username = user.user_metadata?.display_name || user.email.split('@')[0];
+        let avatarColor = null;
+
+        if (profile) {
+            if (profile.username) username = profile.username;
+            if (profile.avatar_color) avatarColor = profile.avatar_color;
+            if (profile.avatar_url) avatarBase64 = profile.avatar_url;
+        }
+
+        document.getElementById('user-name').textContent = username;
+        
+        // Set Avatar
+        const avatarDiv = document.getElementById('user-avatar');
+        if (avatarDiv) {
+            if (avatarBase64) {
+                avatarDiv.innerHTML = '';
+                avatarDiv.style.backgroundImage = `url(${avatarBase64})`;
+                avatarDiv.style.backgroundSize = 'cover';
+                avatarDiv.style.backgroundPosition = 'center';
+            } else {
+                const initial = username.charAt(0).toUpperCase();
+                avatarDiv.textContent = initial;
+                if (avatarColor) {
+                    avatarDiv.style.backgroundColor = avatarColor;
+                    avatarDiv.style.color = '#fff';
+                }
+            }
+        }
+
+        // Handle Logout
+        document.getElementById('logout-btn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            window.location.href = '../index.html';
+        });
+    });
+</script>
+</body>
+</html>
+
+
+
+
+

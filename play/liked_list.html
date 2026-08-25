@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="th" class="overflow-hidden w-full h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ผลโหวตของห้อง - FeedMatch</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans Thai', 'Inter', sans-serif; }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+        /* Hide scrollbar for clean minimal look */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
+</head>
+<body class="h-[100dvh] w-full max-w-[100vw] bg-white flex flex-col overflow-hidden m-0 p-0 overscroll-none touch-pan-y">
+
+    <!-- Standard Header -->
+    <header class="w-full bg-white shadow-sm px-8 py-4 relative z-20 flex justify-between items-center shrink-0">
+        <!-- Left: Logo -->
+        <div class="flex items-center">
+            <img src="../assets/images/Logoremovebg.png" alt="FeedMatch Logo" class="h-16 w-auto object-contain">
+        </div>
+
+        <!-- Right: Close Button -->
+        <a href="javascript:history.back()" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </a>
+    </header>
+
+    <!-- Main Content Area (Scrollable internally if needed, but fits most screens) -->
+    <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-6 pb-6 z-10 relative">
+        <div class="flex flex-col space-y-4 max-w-md mx-auto w-full">
+
+            <!-- Title -->
+            <div class="mb-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">ผลโหวตของห้อง</h2>
+                    <p class="text-gray-500 text-sm mt-1">ร้านที่ทุกคนในห้องถูกใจ เรียงตามคะแนนโหวต</p>
+                </div>
+            </div>
+
+            <div id="list-container" class="flex flex-col space-y-4 pb-12">
+                <!-- Loading State -->
+                <div class="text-center py-10">
+                    <i class="ph ph-spinner-gap animate-spin text-4xl text-orange-500 mb-2"></i>
+                    <p class="text-gray-500">กำลังโหลดข้อมูลร้านที่คุณชอบ...</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomId = urlParams.get('id');
+            const listContainer = document.getElementById('list-container');
+
+            if (!roomId) {
+                showEmpty();
+                return;
+            }
+
+            // Get current user
+            const { data: { session }, error: authError } = await supabaseClient.auth.getSession();
+            if (authError || !session) {
+                window.location.href = '../index.html';
+                return;
+            }
+
+            const userId = session.user.id;
+
+            // Fetch all liked restaurants in this room
+            const { data: swipes, error } = await supabaseClient
+                .from('swipes')
+                .select('restaurant_id, user_id, users(display_name), restaurants(*)')
+                .eq('room_id', roomId)
+                .eq('is_liked', true);
+
+            if (error || !swipes || swipes.length === 0) {
+                showEmpty();
+                return;
+            }
+
+            const restaurantMap = {};
+            swipes.forEach(swipe => {
+                const rId = swipe.restaurant_id;
+                if (!restaurantMap[rId]) {
+                    restaurantMap[rId] = {
+                        restaurant: swipe.restaurants,
+                        likedBy: []
+                    };
+                }
+                
+                // Avoid duplicate user names
+                if (!restaurantMap[rId].likedBy.find(u => u.id === swipe.user_id)) {
+                    restaurantMap[rId].likedBy.push({
+                        id: swipe.user_id,
+                        name: swipe.users?.display_name || 'Unknown'
+                    });
+                }
+            });
+
+            // Sort by number of likes (descending)
+            const groupedRestaurants = Object.values(restaurantMap).sort((a, b) => b.likedBy.length - a.likedBy.length);
+            
+            // Limit top 10 restaurants to match user request "ใน list จะมี 10 ร้าน"
+            const topRestaurants = groupedRestaurants.slice(0, 10);
+
+            if (topRestaurants.length === 0) {
+                showEmpty();
+                return;
+            }
+
+            renderList(topRestaurants);
+        });
+
+        function renderList(groupedRestaurants) {
+            const listContainer = document.getElementById('list-container');
+            listContainer.innerHTML = '';
+
+            groupedRestaurants.forEach(group => {
+                const food = group.restaurant;
+                const likedByHtml = group.likedBy.map(u => 
+                    `<span class="bg-orange-100 text-orange-600 px-2 py-0.5 rounded text-xs font-medium">${u.name}</span>`
+                ).join('');
+
+                const itemHtml = `
+                <div class="liked-item relative flex items-center p-5 rounded-2xl bg-gray-50 border border-gray-100 hover:border-orange-500 hover:shadow-md transition-all duration-300 cursor-pointer group" data-id="${food.id}">
+                    <div class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm shadow-md border-2 border-white z-10">
+                        ${group.likedBy.length}
+                    </div>
+                    <div class="flex items-center gap-5 w-full">
+                        <img src="${food.image_url}" alt="${food.name}" class="w-20 h-20 rounded-xl object-cover shadow-sm shrink-0">
+                        <div class="flex flex-col pr-2 w-full">
+                            <h3 class="text-lg font-bold text-gray-800 group-hover:text-orange-500 transition-colors">${food.name}</h3>
+                            <p class="text-gray-400 text-sm mt-1 font-medium mb-2">${food.category || 'ร้านอาหาร'} ${food.distance_km ? `(${food.distance_km} กม.)` : ''}</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${likedByHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        }
+
+        function showEmptyIfNone() {
+            const listContainer = document.getElementById('list-container');
+            if (listContainer.querySelectorAll('.liked-item').length === 0) {
+                showEmpty();
+            }
+        }
+
+        function showEmpty() {
+            const listContainer = document.getElementById('list-container');
+            listContainer.innerHTML = `
+                <div class="text-center py-16 bg-gray-50 rounded-2xl border border-gray-100 mt-4">
+                    <i class="ph ph-ghost text-6xl text-gray-300 mb-3"></i>
+                    <h3 class="text-lg font-semibold text-gray-500">ยังไม่มีร้านที่ชอบ</h3>
+                    <p class="text-gray-400 text-sm mt-1">ลองไปปัดขวาร้านอาหารที่คุณสนใจสิ!</p>
+                    <a href="javascript:history.back()" class="inline-block mt-6 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-6 rounded-xl transition-colors shadow-sm">
+                        กลับไปดูผล
+                    </a>
+                </div>
+            `;
+            const resetBtn = document.getElementById('reset-all-btn');
+            if (resetBtn) resetBtn.style.display = 'none';
+        }
+
+        // Removed Clear All button logic as this is now a shared group view.
+    </script>
+
+</body>
+</html>
+
+
+
+
+

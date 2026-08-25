@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>นำทางไปร้าน - FeedMatch</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body { font-family: 'Noto Sans Thai', 'Inter', sans-serif; }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+        
+        /* Dashed Line Animation */
+        @keyframes dash {
+            to { stroke-dashoffset: -24; }
+        }
+        .animate-dash {
+            animation: dash 1s linear infinite;
+        }
+    </style>
+    <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
+</head>
+<body class="min-h-screen bg-gray-50 flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-50 w-full shrink-0">
+        <!-- Left: Logo -->
+        <div class="flex items-center">
+            <img src="../assets/images/Logoremovebg.png" alt="FeedMatch Logo" class="h-16 w-auto object-contain">
+        </div>
+        
+        <!-- Right: Back Button -->
+        <a id="back-btn" href="../room/main.html" class="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-medium transition-colors bg-gray-50 hover:bg-gray-100 px-4 py-2.5 rounded-full">
+            <i class="ph ph-house text-xl"></i>
+            หน้าหลัก
+        </a>
+    </header>
+
+    <!-- Main Content Container (Centered with Padding) -->
+    <main class="max-w-5xl mx-auto w-full px-6 py-8 flex-grow flex flex-col gap-8">
+        
+        <!-- The Map Section (TOP) -->
+        <section class="w-full h-[40vh] md:h-[50vh] bg-gray-200 rounded-3xl shadow-md overflow-hidden relative border border-gray-100">
+            <!-- Map Background (iframe with grayscale and lowered opacity for premium look) -->
+            <iframe
+                id="map-iframe"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15502.83415175902!2d100.523186!3d13.736717!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e2992850935db5%3A0x67c29be016259020!2sHaidilao%20Hot%20Pot%20(Central%20World)!5e0!3m2!1sen!2sth!4v1700000000000!5m2!1sen!2sth" 
+                class="absolute inset-0 w-full h-full border-0 grayscale-[40%] opacity-70 pointer-events-none"
+                allowfullscreen="" 
+                loading="lazy" 
+                referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+
+            <!-- Simulated Route UI Overlay -->
+            
+            <!-- Dashed Line SVG -->
+
+
+        </section>
+
+        <!-- Restaurant Details & Actions Section (BOTTOM) -->
+        <section class="flex flex-col gap-6 bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <!-- Text Info -->
+            <div class="flex flex-col">
+                <h1 id="restaurant-name" class="text-3xl md:text-4xl font-bold text-gray-900 mb-3 leading-tight">กำลังโหลด...</h1>
+            </div>
+            
+            <hr class="border-gray-100">
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col w-full mt-2 gap-3">
+                <!-- Primary Button -->
+                <a id="nav-btn" href="#" target="_blank" rel="noopener noreferrer" class="w-full bg-orange-500 text-white font-bold text-lg py-4 rounded-2xl shadow-lg hover:bg-orange-600 transition-all flex items-center justify-center gap-2">
+                    <i class="ph-fill ph-navigation-arrow text-2xl"></i>
+                    เริ่มนำทาง
+                </a>
+                
+                <!-- Secondary Buttons -->
+                <div class="flex flex-col w-full mt-2">
+                    <a id="back-liked-btn" href="#" class="w-full bg-gray-100 text-gray-700 font-bold text-base py-3 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-list-heart"></i>
+                        ดูรายชื่อร้านที่ถูกใจ
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Supabase & Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const restaurantId = urlParams.get('id');
+        const roomId = urlParams.get('room_id');
+
+        // Setup back button (Header) to go to main or history
+        const backBtn = document.getElementById('back-btn');
+        if (backBtn) {
+            const from = urlParams.get('from');
+            if (from === 'history') {
+                backBtn.href = '../user/history.html';
+                backBtn.innerHTML = '<i class="ph ph-clock-counter-clockwise text-xl"></i> ประวัติ';
+            } else {
+                backBtn.href = '#';
+                backBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (roomId) {
+                        await supabaseClient.from('rooms').update({ status: 'completed' }).eq('id', roomId);
+                    }
+                    window.location.href = '../room/main.html';
+                });
+            }
+        }
+
+        // Setup liked list back button
+        const backLikedBtn = document.getElementById('back-liked-btn');
+        if (backLikedBtn && roomId) {
+            backLikedBtn.href = `../play/liked_list.html?id=${roomId}`;
+        }
+
+        // Haversine formula to calculate distance in km
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius of the earth in km
+            const dLat = (lat2 - lat1) * (Math.PI / 180);
+            const dLon = (lon2 - lon1) * (Math.PI / 180);
+            const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+                Math.sin(dLon / 2) * Math.sin(dLon / 2); 
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+            return parseFloat((R * c).toFixed(1));
+        }
+
+
+
+        async function init() {
+            if (!restaurantId) {
+                document.getElementById('restaurant-name').textContent = 'ข้อผิดพลาด: ไม่พบรหัสร้านอาหาร (ID)';
+                return;
+            }
+
+            const { data: restaurant, error } = await supabaseClient
+                .from('restaurants')
+                .select('*')
+                .eq('id', restaurantId)
+                .single();
+            
+            if (error || !restaurant) {
+                console.error("Error fetching restaurant:", error);
+                document.getElementById('restaurant-name').textContent = `ข้อผิดพลาด: ${error ? error.message : 'ไม่พบข้อมูลร้าน'}`;
+                return;
+            }
+
+            // Update UI with basic info
+            document.getElementById('restaurant-name').textContent = restaurant.name;
+            const overlayElement = document.getElementById('restaurant-name-overlay');
+            if (overlayElement) overlayElement.textContent = restaurant.name;
+            
+            // Update Map Iframe dynamically
+            const mapIframe = document.getElementById('map-iframe');
+            if (restaurant.lat && restaurant.lng) {
+                mapIframe.src = `https://maps.google.com/maps?q=${restaurant.lat},${restaurant.lng}&hl=th&z=15&output=embed`;
+            } else {
+                mapIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(restaurant.name)}&hl=th&z=15&output=embed`;
+            }
+
+            // Distance and time logic removed as per user request
+
+            // Update Navigation Button Links
+            const navBtn = document.getElementById('nav-btn');
+            
+            // Prioritize the actual Google Maps URL if provided in Supabase (contains Place info)
+            if (restaurant.map_url && restaurant.map_url.trim() !== '' && restaurant.map_url !== 'https://goo.gl/maps/example') {
+                navBtn.href = restaurant.map_url;
+            } else if (restaurant.lat && restaurant.lng) {
+                // Fallback to raw coordinates
+                navBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
+            }
+
+            // Function to update map and distance with given user coordinates
+            const updateMapWithUserLocation = (userLat, userLng) => {
+                if (restaurant.lat && restaurant.lng) {
+                    // Distance and time logic removed as per user request
+                    // Do NOT update mapIframe with saddr/daddr as it breaks the embed without an API key.
+                    // The iframe will continue to show the destination pin accurately.
+                }
+            };
+
+            // 2. Try to get LIVE location for on-screen distance calculation
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        updateMapWithUserLocation(position.coords.latitude, position.coords.longitude);
+                    },
+                    async (error) => {
+                        console.log("Live GPS failed, falling back to saved profile location.");
+                        // Fallback to profile location
+                        const { data: { session } } = await supabaseClient.auth.getSession();
+                        if (session) {
+                            const { data: profile } = await supabaseClient
+                                .from('profiles')
+                                .select('lat, lng')
+                                .eq('id', session.user.id)
+                                .single();
+                            
+                            if (profile && profile.lat && profile.lng) {
+                                updateMapWithUserLocation(profile.lat, profile.lng);
+                            }
+                        }
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            } else {
+                // Browser doesn't support geolocation, fallback immediately
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) {
+                    const { data: profile } = await supabaseClient
+                        .from('profiles')
+                        .select('lat, lng')
+                        .eq('id', session.user.id)
+                        .single();
+                    
+                    if (profile && profile.lat && profile.lng) {
+                        updateMapWithUserLocation(profile.lat, profile.lng);
+                    }
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swiping Arena - FeedMatch</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Prompt) -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Confetti JS -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        
+        .card-animate-out-left {
+            transform: translateX(-150%) rotate(-15deg);
+            opacity: 0;
+            transition: transform 0.4s ease-in, opacity 0.4s ease-in;
+        }
+
+        .card-animate-out-right {
+            transform: translateX(150%) rotate(15deg);
+            opacity: 0;
+            transition: transform 0.4s ease-in, opacity 0.4s ease-in;
+        }
+
+        .card-animate-in {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8) translateY(50px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .img-gradient {
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+        }
+        
+        .match-text {
+            background: linear-gradient(90deg, #F97316, #EF4444);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 2px 2px 10px rgba(249, 115, 22, 0.2);
+        }
+        .card-enter {
+            animation: bounceIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+    <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
+</head>
+<body class="min-h-screen bg-gray-50 flex flex-col overflow-x-hidden">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-50 w-full shrink-0">
+        <!-- Left: Logo -->
+        <div class="flex items-center">
+            <img src="../assets/images/Logoremovebg.png" alt="FeedMatch Logo" class="h-16 w-auto object-contain">
+        </div>
+        
+        <!-- Right: Leave Room (with Modal Trigger) -->
+        <button onclick="showExitModal()" class="text-sm font-medium text-gray-400 hover:text-red-500 transition-colors flex items-center gap-2">
+            <i class="ph ph-sign-out text-lg"></i>
+            ออกจากห้อง
+        </button>
+    </header>
+
+    <!-- Main Arena Layout -->
+    <main class="max-w-4xl w-full mx-auto p-6 flex-grow flex flex-col items-center justify-center relative">
+        
+        <!-- The Food Card Container -->
+        <div id="card-wrapper" class="w-full max-w-2xl h-[65vh] max-h-[600px] bg-white rounded-3xl shadow-xl overflow-hidden relative border border-gray-100 card-animate-in">
+            
+            <!-- Progress UI (Overlaid on card) -->
+            <div class="absolute top-6 inset-x-0 z-30 flex flex-col items-center drop-shadow-md pointer-events-none">
+                <div class="bg-black/40 backdrop-blur-md px-6 py-2.5 rounded-full border border-white/20 flex flex-col items-center">
+                    <span id="counter-text" class="text-white text-sm font-semibold mb-1.5 tracking-wide">เลือกร้านถูกใจ: 0/5</span>
+                    <div class="w-32 h-1.5 bg-white/30 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-orange-500 rounded-full transition-all duration-500 ease-out" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Image & Content -->
+            <div id="card-content" class="w-full h-full relative">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Action Buttons (2 Choices) -->
+        <div class="flex gap-10 mt-8 z-10">
+            <!-- Pass / Veto Button -->
+            <button id="btn-pass" class="w-20 h-20 bg-white border-2 border-slate-100 rounded-full shadow-lg flex items-center justify-center text-slate-400 text-3xl hover:bg-slate-50 hover:border-slate-200 hover:text-slate-600 hover:scale-110 active:scale-95 transition-all cursor-pointer">
+                <i class="ph-bold ph-x"></i>
+            </button>
+            
+            <!-- Like Button -->
+            <button id="btn-like" class="w-24 h-24 bg-white border-2 border-orange-100 rounded-full shadow-xl flex items-center justify-center text-orange-500 text-4xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-2xl hover:scale-110 active:scale-95 transition-all cursor-pointer">
+                <i class="ph-fill ph-heart"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Exit Confirmation Modal -->
+    <div id="exit-modal" class="fixed inset-0 z-[100] hidden items-center justify-center">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="hideExitModal()"></div>
+        <!-- Modal Content -->
+        <div class="bg-white rounded-[2rem] shadow-2xl p-8 max-w-sm w-full mx-4 relative z-10 animate-[popIn_0.3s_ease-out]">
+            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mb-4 mx-auto">
+                <i class="ph-fill ph-warning-circle"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-center text-gray-900 mb-2">ยืนยันการออก?</h3>
+            <p class="text-gray-500 text-center mb-8">คุณกำลังจะออกจากห้อง การโหวตของคุณในรอบนี้จะถูกยกเลิกทั้งหมด</p>
+            <div class="flex gap-4">
+                <button onclick="hideExitModal()" class="flex-1 py-3.5 rounded-xl font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">ยกเลิก</button>
+                <button id="leave-btn" onclick="leaveRoom()" class="flex-1 py-3.5 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors text-center block">ออกจากห้อง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Overlay Removed (now redirects to spin.html) -->
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+    
+    <!-- JavaScript Swiping Logic -->
+    <script>
+        // Modal Logic
+        function showExitModal() {
+            const modal = document.getElementById('exit-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideExitModal() {
+            const modal = document.getElementById('exit-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function leaveRoom() {
+            const btn = document.getElementById('leave-btn');
+            if (btn) {
+                btn.innerText = 'กำลังออก...';
+                btn.disabled = true;
+            }
+
+            isIntentionalNavigation = true;
+
+            try {
+                // To preserve history and not break the game for others, we no longer delete the room or members.
+                // We simply redirect the user back to the main page.
+            } catch (err) {
+                console.error('Error leaving room:', err);
+            }
+
+            // Redirect back to main
+            window.location.href = '../room/main.html';
+        }
+
+        // State variables
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('id');
+        let currentUser = null;
+        let memberCount = 1;
+        let isIntentionalNavigation = false;
+        
+        let foodData = [];
+        let currentIndex = 0;
+        let isWaitingForMatch = false;
+        let likedCount = 0;
+        const MAX_LIKES = 5;
+
+        // Aggressive deletion on pagehide removed to prevent dropping rooms on mobile tab switch
+
+        // DOM Elements
+        const cardWrapper = document.getElementById('card-wrapper');
+        const cardContent = document.getElementById('card-content');
+        const counterText = document.getElementById('counter-text');
+        const progressBar = document.getElementById('progress-bar');
+        const btnPass = document.getElementById('btn-pass');
+        const btnLike = document.getElementById('btn-like');
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !roomId) {
+                window.location.href = '../index.html';
+                return;
+            }
+            currentUser = session.user;
+            window.currentUserToken = session.access_token;
+
+            // Fetch members
+            const { data: members, count, error: countError } = await supabaseClient
+                .from('room_members')
+                .select('user_id', { count: 'exact' })
+                .eq('room_id', roomId);
+            
+            if (!countError && count) memberCount = count;
+
+            // Fetch Room Details to get Host ID
+            const { data: roomData } = await supabaseClient
+                .from('rooms')
+                .select('host_id')
+                .eq('id', roomId)
+                .single();
+            const hostId = roomData ? roomData.host_id : currentUser.id; // fallback to current user
+
+            // Fetch profiles to get dietary restrictions, price levels, and host location
+            let groupRestrictions = [];
+            let groupPriceLevels = [];
+            let hostLat = null;
+            let hostLng = null;
+            let hostMaxDistance = 10; // default 10km
+
+            if (members && members.length > 0) {
+                const memberIds = members.map(m => m.user_id);
+                // Also make sure hostId is in the list, though it should be if they are a member
+                if (!memberIds.includes(hostId)) memberIds.push(hostId);
+
+                const { data: profiles } = await supabaseClient
+                    .from('profiles')
+                    .select('id, dietary_restrictions, price_levels, lat, lng, max_distance')
+                    .in('id', memberIds);
+                    
+                if (profiles) {
+                    const hostProfile = profiles.find(p => p.id === hostId) || profiles.find(p => p.id === currentUser.id);
+                    if (hostProfile) {
+                        hostLat = hostProfile.lat;
+                        hostLng = hostProfile.lng;
+                        hostMaxDistance = hostProfile.max_distance || 10;
+                        groupRestrictions = hostProfile.dietary_restrictions || [];
+                        groupPriceLevels = hostProfile.price_levels || [];
+                    }
+                }
+            }
+
+            // Haversine Distance Calculator Helper
+            function calculateDistance(lat1, lon1, lat2, lon2) {
+                if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+                const R = 6371; // Radius of the earth in km
+                const dLat = (lat2 - lat1) * (Math.PI / 180);
+                const dLon = (lon2 - lon1) * (Math.PI / 180);
+                const a = 
+                    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2); 
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+                return R * c; // Distance in km
+            }
+
+            // Fetch restaurants that haven't been swiped by this user in this room
+            // First, get swiped restaurant IDs
+            const { data: swipedData } = await supabaseClient
+                .from('swipes')
+                .select('restaurant_id, is_liked')
+                .eq('room_id', roomId)
+                .eq('user_id', currentUser.id);
+            
+            const swipedIds = swipedData ? swipedData.map(s => s.restaurant_id) : [];
+            likedCount = swipedData ? swipedData.filter(s => s.is_liked).length : 0;
+
+            // Then fetch all restaurants not in swipedIds
+            let query = supabaseClient.from('restaurants').select('*');
+            if (swipedIds.length > 0) {
+                query = query.not('id', 'in', `(${swipedIds.join(',')})`);
+            }
+            
+            const { data: restaurants, error: restError } = await query;
+            
+            if (restError) {
+                console.error("Error fetching restaurants:", restError);
+            } else {
+                let filtered = restaurants || [];
+                // Find all valid categories present in the restaurant data
+                const validCategories = [...new Set(filtered.map(r => r.category))].filter(Boolean);
+                
+                // Only consider restrictions that actually match real categories in the DB
+                const activeFilters = groupRestrictions.filter(cat => validCategories.includes(cat));
+
+                // Filter by group preferred categories
+                if (activeFilters.length > 0) {
+                    filtered = filtered.filter(r => {
+                        return activeFilters.includes(r.category);
+                    });
+                }
+                
+                // Filter by group price levels
+                if (groupPriceLevels.length > 0) {
+                    filtered = filtered.filter(r => {
+                        return !r.price_level || groupPriceLevels.includes(r.price_level);
+                    });
+                }
+
+                // Filter by Host Distance
+                if (hostLat && hostLng) {
+                    filtered = filtered.filter(r => {
+                        if (!r.lat || !r.lng) return true; // If restaurant has no coords, don't filter it out
+                        const dist = calculateDistance(hostLat, hostLng, r.lat, r.lng);
+                        return dist !== null && dist <= hostMaxDistance;
+                    });
+                }
+                // Shuffle the array (Fisher-Yates) so the order is random every time
+                for (let i = filtered.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+                }
+                
+                foodData = filtered;
+                
+                if (foodData.length === 0 && swipedIds.length === 0) {
+                    // No restaurants match the group's categories at all
+                    cardWrapper.className = "w-full max-w-2xl h-[65vh] max-h-[600px] bg-white rounded-3xl shadow-xl overflow-hidden relative border border-gray-100 flex flex-col items-center justify-center p-8 text-center";
+                    cardContent.innerHTML = `
+                        <i class="ph-fill ph-warning-circle text-6xl text-red-400 mb-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">ไม่พบร้านอาหารที่ตรงใจ</h2>
+                        <p class="text-gray-500">ดูเหมือนประเภทร้านอาหารที่กลุ่มเลือกจะไม่มีในระบบเลย ลองปรับหมวดหมู่ในโปรไฟล์ดูนะ</p>
+                    `;
+                    btnLike.disabled = true;
+                    btnPass.disabled = true;
+                    btnLike.classList.add('opacity-50');
+                    btnPass.classList.add('opacity-50');
+                } else {
+                    updateProgressUI();
+                    renderCard();
+                }
+            }
+
+            // Real-time subscription to matches
+            supabaseClient
+                .channel('matches_changes')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'matches', filter: `room_id=eq.${roomId}` }, payload => {
+                    console.log('Match found!', payload);
+                    // Redirect everyone to spin.html
+                    window.location.href = `spin.html?id=${roomId}`;
+                })
+                .subscribe();
+        });
+
+        // Function to create card HTML
+        function getCardHTML(food) {
+            let tagsHtml = '';
+            if (food.category) tagsHtml += `<span class="px-4 py-1.5 bg-white/20 backdrop-blur-md text-white font-medium rounded-full border border-white/30 text-sm shadow-sm">${food.category}</span>`;
+            if (food.price_level) tagsHtml += `<span class="px-4 py-1.5 bg-white/20 backdrop-blur-md text-white font-medium rounded-full border border-white/30 text-sm shadow-sm">${food.price_level}</span>`;
+
+            const distanceStr = food.distance_km ? `${food.distance_km} กม.` : '';
+
+            return `
+                <img src="${food.image_url}" alt="${food.name}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105">
+                
+                <!-- Content Overlay -->
+                <div class="absolute inset-0 img-gradient flex flex-col justify-end p-8 md:p-10 pointer-events-none">
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        ${tagsHtml}
+                    </div>
+                    <h2 class="text-3xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg leading-tight">${food.name}</h2>
+                    <div class="flex items-center text-white/90 text-lg font-medium drop-shadow-md">
+                        <i class="ph-fill ph-storefront mr-2 text-orange-400"></i>
+                        <span class="mr-4">${food.name.split('-')[0]}</span>
+                        ${distanceStr ? `<i class="ph-fill ph-map-pin mr-2 text-orange-400"></i><span>${distanceStr}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize first card
+        function renderCard() {
+            if (likedCount >= MAX_LIKES) {
+                showWaitingScreen();
+                return;
+            }
+
+            if (currentIndex >= foodData.length) {
+                // Out of cards
+                cardWrapper.className = "w-full max-w-2xl h-[65vh] max-h-[600px] bg-white rounded-3xl shadow-xl overflow-hidden relative border border-gray-100 flex flex-col items-center justify-center";
+                cardContent.innerHTML = `
+                    <div class="text-center p-8">
+                        <i class="ph-fill ph-hourglass-high text-6xl text-orange-400 mb-4 animate-pulse"></i>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">ปัดครบทุกร้านแล้ว!</h2>
+                        <p class="text-gray-500">รอเพื่อนๆ โหวตสักครู่... ถ้ามีร้านที่ใจตรงกัน ระบบจะแจ้งเตือนทันที</p>
+                    </div>
+                `;
+                btnLike.disabled = true;
+                btnPass.disabled = true;
+                btnLike.classList.add('opacity-50');
+                btnPass.classList.add('opacity-50');
+                isWaitingForMatch = true;
+                checkAndCalculateMatch();
+                return;
+            }
+            // Remove animation classes before resetting content
+            cardWrapper.className = "w-full max-w-2xl h-[65vh] max-h-[600px] bg-white rounded-3xl shadow-xl overflow-hidden relative border border-gray-100 card-animate-in";
+            cardContent.innerHTML = getCardHTML(foodData[currentIndex]);
+        }
+
+        // Handle button clicks
+        async function handleAction(action) {
+            if (btnLike.disabled || isWaitingForMatch) return;
+            // Disable buttons to prevent spamming
+            btnLike.disabled = true;
+            btnPass.disabled = true;
+
+            const isLiked = action === 'like';
+            const currentRestaurant = foodData[currentIndex];
+
+            // Remove entrance animation class so it doesn't conflict with our transition
+            cardWrapper.classList.remove('card-animate-in');
+
+            // Enforce transition for button clicks
+            cardWrapper.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
+            
+            // Force browser reflow to ensure the transition is picked up
+            void cardWrapper.offsetWidth;
+
+            // Apply exit animation
+            if (isLiked) {
+                cardWrapper.style.transform = 'translateX(150%) rotate(15deg)';
+                cardWrapper.style.opacity = '0';
+            } else {
+                cardWrapper.style.transform = 'translateX(-150%) rotate(-15deg)';
+                cardWrapper.style.opacity = '0';
+            }
+
+            if (isLiked) {
+                likedCount++;
+            }
+
+            // Record to DB asynchronously (don't block animation)
+            // To save space, we only record "Likes". We don't save "Passes" anymore.
+            let insertPromise = Promise.resolve({ error: null });
+            if (isLiked) {
+                insertPromise = supabaseClient.from('swipes').insert([{
+                    room_id: roomId,
+                    user_id: currentUser.id,
+                    restaurant_id: currentRestaurant.id,
+                    is_liked: true
+                }]);
+            }
+
+            // Wait for exit animation to finish
+            setTimeout(async () => {
+                // Ensure DB insert is complete before we proceed
+                const { error } = await insertPromise;
+                if (error) console.error("Error saving swipe:", error);
+
+                cardWrapper.style.transition = '';
+                cardWrapper.style.transform = '';
+                cardWrapper.style.opacity = '';
+
+                // Prepare next card
+                currentIndex++;
+                updateProgressUI();
+                renderCard();
+                
+                // Re-enable buttons if not waiting
+                if (!isWaitingForMatch) {
+                    btnLike.disabled = false;
+                    btnPass.disabled = false;
+                }
+            }, 400); // Matches CSS transition time
+        }
+
+        let waitingInterval;
+
+        async function showWaitingScreen() {
+            cardWrapper.className = "w-full max-w-2xl h-[65vh] max-h-[600px] bg-white rounded-3xl shadow-xl overflow-hidden relative border border-gray-100 flex flex-col items-center justify-center";
+            
+            // Check if match already exists
+            const { data: existingMatch } = await supabaseClient.from('matches').select('*').eq('room_id', roomId);
+            const hasMatch = existingMatch && existingMatch.length > 0;
+
+            cardContent.innerHTML = `
+                <div class="text-center p-8">
+                    <i class="ph-fill ph-check-circle text-6xl text-green-500 mb-4"></i>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">เลือกครบ 5 ร้านแล้ว!</h2>
+                    <p id="waiting-text" class="text-gray-500 mb-6">กำลังประมวลผลผลลัพธ์ หรือรอเพื่อนๆ สักครู่...</p>
+                    ${hasMatch ? `<a href="spin.html?id=${roomId}" class="mt-4 px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-md inline-block">ดูผลลัพธ์อีกครั้ง</a>` : ''}
+                </div>
+            `;
+            btnLike.disabled = true;
+            btnPass.disabled = true;
+            btnLike.classList.add('opacity-50');
+            btnPass.classList.add('opacity-50');
+            isWaitingForMatch = true;
+            
+            if (!hasMatch) {
+                scheduleCheckMatch();
+            }
+        }
+
+        let isCalculatingMatch = false;
+
+        async function scheduleCheckMatch() {
+            if (isCalculatingMatch) return;
+            isCalculatingMatch = true;
+            await checkAndCalculateMatch();
+            isCalculatingMatch = false;
+            
+            // Check if we need to poll again
+            if (isWaitingForMatch && !document.querySelector('a[href^="spin.html"]')) {
+                waitingInterval = setTimeout(scheduleCheckMatch, 3000);
+            }
+        }
+
+        async function checkAndCalculateMatch() {
+            // Check if match already exists (maybe calculated by another user)
+            const { data: existingMatch } = await supabaseClient.from('matches').select('*').eq('room_id', roomId);
+            if (existingMatch && existingMatch.length > 0) {
+                if (waitingInterval) clearTimeout(waitingInterval);
+                const waitingText = document.getElementById('waiting-text');
+                if (waitingText) {
+                    waitingText.textContent = 'ประมวลผลเสร็จสิ้น!';
+                }
+                if (!document.querySelector('a[href^="spin.html"]')) {
+                     cardContent.querySelector('.text-center').innerHTML += `<a href="spin.html?id=${roomId}" class="mt-4 px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-md inline-block">ดูผลลัพธ์</a>`;
+                }
+                return;
+            }
+
+            // Get all likes in this room
+            const { data: allSwipes, error } = await supabaseClient
+                .from('swipes')
+                .select('*')
+                .eq('room_id', roomId)
+                .eq('is_liked', true);
+            
+            if (error) return;
+
+            const likesByUser = {};
+            const likesByRestaurant = {};
+            
+            allSwipes.forEach(s => {
+                likesByUser[s.user_id] = (likesByUser[s.user_id] || 0) + 1;
+                likesByRestaurant[s.restaurant_id] = (likesByRestaurant[s.restaurant_id] || 0) + 1;
+            });
+
+            // Calculate finished users
+            let finishedUsersCount = 0;
+            for (let uid in likesByUser) {
+                if (likesByUser[uid] >= MAX_LIKES) {
+                    finishedUsersCount++;
+                }
+            }
+
+            // Update UI
+            const waitingText = document.getElementById('waiting-text');
+            if (waitingText) {
+                // If memberCount is 1 (Solo), we don't need to show x/y people
+                if (memberCount > 1) {
+                    waitingText.textContent = `รอเพื่อนๆ สักครู่... (เสร็จแล้ว ${finishedUsersCount}/${memberCount} คน)`;
+                } else {
+                    waitingText.textContent = `กำลังประมวลผลผลลัพธ์...`;
+                }
+            }
+
+            if (memberCount === 1) {
+                // Solo mode: done immediately
+                if (waitingInterval) clearTimeout(waitingInterval);
+                await finalizeMatch(likesByRestaurant);
+            } else {
+                // Group mode: wait until the total likes in the room >= memberCount * MAX_LIKES
+                let totalLikes = Object.values(likesByUser).reduce((a,b)=>a+b, 0);
+                if (totalLikes >= memberCount * MAX_LIKES) {
+                    if (waitingInterval) clearTimeout(waitingInterval);
+                    await finalizeMatch(likesByRestaurant);
+                }
+            }
+        }
+
+        async function finalizeMatch(likesByRestaurant) {
+            // Avoid duplicate matches
+            const { data: existingMatch } = await supabaseClient.from('matches').select('*').eq('room_id', roomId);
+            if (existingMatch && existingMatch.length > 0) return;
+
+            let winnerId = null;
+            let maxVotes = 0;
+            const tiedRestaurants = [];
+
+            for (let rid in likesByRestaurant) {
+                if (likesByRestaurant[rid] > maxVotes) {
+                    maxVotes = likesByRestaurant[rid];
+                    tiedRestaurants.length = 0;
+                    tiedRestaurants.push(rid);
+                } else if (likesByRestaurant[rid] === maxVotes) {
+                    tiedRestaurants.push(rid);
+                }
+            }
+
+            if (tiedRestaurants.length > 0) {
+                // Random tie breaker
+                winnerId = tiedRestaurants[Math.floor(Math.random() * tiedRestaurants.length)];
+            } else {
+                // No likes at all!
+                const cardContent = document.getElementById('card-content');
+                cardContent.innerHTML = `
+                    <div class="text-center p-8">
+                        <i class="ph-fill ph-smiley-sad text-6xl text-gray-400 mb-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">ไม่มีร้านที่ถูกใจเลย!</h2>
+                        <p class="text-gray-500 mb-6">ดูเหมือนจะไม่มีร้านที่คุณหรือเพื่อนๆ กดถูกใจเลย ลองกลับไปสร้างห้องใหม่และปรับตัวกรองดูนะ</p>
+                        <a href="../room/main.html" class="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors shadow-sm inline-block">กลับหน้าหลัก</a>
+                    </div>
+                `;
+                await supabaseClient.from('rooms').delete().eq('id', roomId);
+                return;
+            }
+
+            if (winnerId) {
+                const { error: insertError } = await supabaseClient.from('matches').insert([{
+                    room_id: roomId,
+                    restaurant_id: winnerId
+                }]);
+
+                if (insertError) {
+                    console.error('Error inserting match:', insertError);
+                    alert(`ไม่สามารถบันทึกผลลัพธ์ได้: ${insertError.message}`);
+                    return;
+                }
+
+                // Update room status to completed
+                await supabaseClient.from('rooms').update({ status: 'completed' }).eq('id', roomId);
+
+                // Show button immediately after finalizing
+                const waitingText = document.getElementById('waiting-text');
+                if (waitingText) {
+                    waitingText.textContent = 'ประมวลผลเสร็จสิ้น!';
+                }
+                if (!document.querySelector('a[href^="spin.html"]')) {
+                     cardContent.querySelector('.text-center').innerHTML += `<a href="spin.html?id=${roomId}" class="mt-4 px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-md inline-block">ดูผลลัพธ์</a>`;
+                }
+            }
+        }
+
+        // Update top bar progress
+        function updateProgressUI() {
+            counterText.innerText = `เลือกร้านถูกใจ: ${likedCount}/${MAX_LIKES}`;
+            const percentage = (likedCount / MAX_LIKES) * 100;
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        // Swipe Drag Logic
+        let isDragging = false;
+        let startX = 0;
+        let currentX = 0;
+
+        cardWrapper.addEventListener('touchstart', dragStart, { passive: true });
+        cardWrapper.addEventListener('touchmove', dragMove, { passive: true });
+        cardWrapper.addEventListener('touchend', dragEnd);
+        cardWrapper.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            if (btnLike.disabled || isWaitingForMatch) return;
+            if (e.type === 'touchstart') {
+                startX = e.touches[0].clientX;
+            } else {
+                e.preventDefault();
+                startX = e.clientX;
+            }
+            isDragging = true;
+            cardWrapper.style.transition = 'none';
+            cardWrapper.classList.remove('card-animate-in');
+            // Remove grab cursor, use grabbing
+            cardWrapper.style.cursor = 'grabbing';
+        }
+
+        function dragMove(e) {
+            if (!isDragging) return;
+            const x = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            currentX = x - startX;
+            const rotate = currentX * 0.05;
+            cardWrapper.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+        }
+
+        function dragEnd(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            cardWrapper.style.cursor = 'grab';
+            
+            // Re-enable transition for snapping back
+            cardWrapper.style.transition = 'transform 0.4s ease-out';
+            
+            const threshold = window.innerWidth * 0.25; // 25% of screen width
+            if (currentX > threshold) {
+                handleAction('like');
+            } else if (currentX < -threshold) {
+                handleAction('pass');
+            } else {
+                cardWrapper.style.transform = 'translateX(0) rotate(0)';
+                // Remove inline style after snap
+                setTimeout(() => {
+                    if(!isDragging) cardWrapper.style.transform = '';
+                }, 400);
+            }
+            currentX = 0;
+        }
+
+        // Set initial cursor
+        cardWrapper.style.cursor = 'grab';
+
+        // Event Listeners
+        btnPass.addEventListener('click', () => handleAction('pass'));
+        btnLike.addEventListener('click', () => handleAction('like'));
+
+        // Match overlay logic has been moved to spin.html
+
+    </script>
+</body>
+</html>

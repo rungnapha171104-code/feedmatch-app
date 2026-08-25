@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>FeedMatch - Dashboard</title>
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+        <!-- Phosphor Icons -->
+        <script src="https://unpkg.com/@phosphor-icons/web"></script>
+        <style>
+        body { font-family: 'Noto Sans Thai', 'Inter', sans-serif; }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+
+        /* Glassmorphism */
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 1);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        </style>
+    <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50/50 relative text-gray-800">
+
+    <!-- Ambient Background Blobs -->
+    <div class="fixed top-0 left-0 w-[80vw] h-[80vw] md:w-[40vw] md:h-[40vw] rounded-full bg-rose-400/10 blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2 z-0"></div>
+    <div class="fixed bottom-0 right-0 w-[80vw] h-[80vw] md:w-[50vw] md:h-[50vw] rounded-full bg-orange-400/10 blur-3xl pointer-events-none translate-x-1/4 translate-y-1/4 z-0"></div>
+
+    <!-- Web Navigation Bar -->
+    <nav class="sticky top-0 z-50 w-full glass-nav px-8 py-4 flex justify-between items-center">
+        <!-- Left: Logo -->
+        <div class="flex items-center">
+            <img src="../assets/images/Logoremovebg.png" alt="FeedMatch Logo" class="h-16 w-auto object-contain">
+        </div>
+
+    <!-- Right: Desktop Navigation -->
+    <div class="hidden md:flex items-center gap-8">
+        <a href="../user/history.html" class="flex items-center gap-2 text-gray-500 hover:text-orange-500 font-medium transition-colors">
+            <i class="ph ph-clock-counter-clockwise text-xl"></i> ประวัติ
+        </a>
+        <a href="../user/settings.html" class="flex items-center gap-2 text-gray-500 hover:text-orange-500 font-medium transition-colors">
+            <i class="ph ph-sliders-horizontal text-xl"></i> ตั้งค่า
+        </a>
+<a href="../user/profile.html" class="relative cursor-pointer group block">
+    <img id="desktop-avatar" src="https://ui-avatars.com/api/?name=User&background=F97316&color=fff&size=128" alt="User Profile" class="w-10 h-10 rounded-full object-cover shadow-sm border-2 border-white ring-2 ring-transparent group-hover:ring-orange-200 transition-all">
+</a>
+</div>
+
+<!-- Mobile Menu Button -->
+<button id="mobile-menu-btn" class="md:hidden p-2 text-gray-500 hover:text-orange-500 rounded-lg transition-colors focus:outline-none z-50">
+    <i id="icon-menu" class="ph ph-list text-3xl"></i>
+    <i id="icon-close" class="ph ph-x text-3xl hidden"></i>
+</button>
+
+<!-- Mobile Menu Dropdown -->
+<div id="mobile-menu" class="hidden absolute top-full left-0 w-full glass-nav flex-col md:hidden pb-6 pt-2 shadow-lg border-b border-gray-100 z-40">
+    <a href="../user/history.html" class="group flex items-center gap-4 px-6 py-3 mx-4 mt-2 text-gray-600 hover:bg-orange-50 hover:text-orange-600 rounded-2xl font-medium transition-all">
+        <div class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-orange-500 transition-all">
+            <i class="ph ph-clock-counter-clockwise text-xl"></i>
+        </div>
+                ประวัติการสุ่ม
+</a>
+<a href="../user/settings.html" class="group flex items-center gap-4 px-6 py-3 mx-4 mt-1 text-gray-600 hover:bg-orange-50 hover:text-orange-600 rounded-2xl font-medium transition-all">
+    <div class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-orange-500 transition-all">
+        <i class="ph ph-sliders-horizontal text-xl"></i>
+    </div>
+                การตั้งค่าระบบ
+</a>
+<div class="h-px bg-gray-100 mx-8 my-2"></div>
+<a href="../user/profile.html" class="group flex items-center gap-4 px-6 py-3 mx-4 mt-1 text-gray-600 hover:bg-orange-50 hover:text-orange-600 rounded-2xl font-medium transition-all">
+    <div class="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border-2 border-transparent group-hover:border-orange-200 transition-all">
+        <img id="mobile-avatar" src="https://ui-avatars.com/api/?name=User&background=F97316&color=fff&size=64" alt="User" class="w-full h-full object-cover">
+    </div>
+                โปรไฟล์ของฉัน
+</a>
+</div>
+</nav>
+
+<!-- Main Dashboard Area -->
+<main class="flex-grow flex flex-col items-center pb-20 relative z-10 px-4 md:px-6">
+
+    <!-- Hero Greeting Section -->
+    <section class="mt-12 md:mt-16 text-center w-full max-w-3xl">
+        <h1 class="text-3xl md:text-5xl font-bold text-gray-800 tracking-tight leading-tight">
+                หิวแล้วใช่ไหม?<span class="inline-block animate-float"></span>
+        </h1>
+    <p class="text-lg md:text-xl text-gray-500 mt-4 font-medium">เลือกวิธีเริ่มมื้ออร่อยของคุณ</p>
+</section>
+
+<!-- Main Action Cards -->
+<section class="w-full max-w-4xl mx-auto mt-12 grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+
+    <!-- Card 1: Create Room (Primary - Spans full width) -->
+    <a id="createRoomBtn" href="#" class="md:col-span-2 block bg-gradient-to-br from-orange-400 to-orange-500 rounded-3xl p-8 lg:p-12 shadow-orange-500/20 shadow-xl hover:shadow-2xl hover:shadow-orange-500/30 hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden">
+        <div class="absolute -top-24 -right-10 w-64 h-64 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-700"></div>
+        <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-orange-500 shadow-sm group-hover:scale-110 transition-transform duration-300 rotate-3 group-hover:-rotate-3 shrink-0">
+                <i class="ph ph-users-three text-3xl font-bold"></i>
+            </div>
+        <div>
+            <h2 class="text-white text-2xl lg:text-3xl font-bold tracking-tight mb-2">สร้างห้องหาของกิน</h2>
+            <p class="text-orange-50 text-base lg:text-lg font-medium opacity-90">ชวนเพื่อนมาปัดเลือกอาหารด้วยกัน แมตช์ร้านที่ทุกคนชอบ!</p>
+        </div>
+    <div class="hidden md:flex ml-auto w-12 h-12 bg-white/20 rounded-full items-center justify-center text-white backdrop-blur-sm group-hover:translate-x-2 transition-transform shrink-0">
+        <i class="ph ph-arrow-right text-xl font-bold"></i>
+    </div>
+</div>
+</a>
+
+<!-- Card 2: Join Room (Secondary) -->
+<a href="../room/join.html" class="block glass-card rounded-3xl p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-orange-200 transition-all duration-300 cursor-pointer group">
+    <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 mb-6 group-hover:scale-110 group-hover:bg-orange-100 transition-all duration-300">
+        <i class="ph ph-qr-code text-3xl"></i>
+    </div>
+<h2 class="text-gray-800 text-xl md:text-2xl font-bold tracking-tight mb-2">เข้าร่วมห้อง</h2>
+<p class="text-gray-500 font-medium group-hover:text-gray-600 transition-colors line-clamp-2">สแกนคิวอาร์โค้ดหรือกรอกรหัสเพื่อแจมมื้ออร่อยกับเพื่อน</p>
+</a>
+
+<!-- Card 3: Solo Mode (Tertiary) -->
+<a id="soloSwipeBtn" href="#" class="block glass-card rounded-3xl p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-orange-200 transition-all duration-300 cursor-pointer group">
+    <div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-500 mb-6 group-hover:scale-110 group-hover:bg-gray-100 transition-all duration-300">
+        <i class="ph ph-user text-3xl"></i>
+    </div>
+<h2 class="text-gray-800 text-xl md:text-2xl font-bold tracking-tight mb-2">สุ่มคนเดียว</h2>
+<p class="text-gray-500 font-medium group-hover:text-gray-600 transition-colors line-clamp-2">หิวตอนนี้? ปัดเลือกอาหารเองคนเดียวง่ายๆ ไม่ต้องรอใคร</p>
+</a>
+
+</section>
+</main>
+
+<script>
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            const iconMenu = document.getElementById('icon-menu');
+            const iconClose = document.getElementById('icon-close');
+
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+                iconMenu.classList.add('hidden');
+                iconClose.classList.remove('hidden');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+                iconMenu.classList.remove('hidden');
+                iconClose.classList.add('hidden');
+            }
+        });
+</script>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/supabase-config.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        
+        if (!session) {
+            window.location.href = '../index.html';
+            return;
+        }
+
+        const user = session.user;
+        const displayName = user.user_metadata?.display_name || 'User';
+        
+        // Fetch profile data
+        const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        // Sync user to public.users table to ensure they exist for foreign keys
+        await supabaseClient.from('users').upsert({ id: user.id, display_name: displayName });
+
+        let finalAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=F97316&color=fff&size=128`;
+
+        if (profile) {
+            if (profile.avatar_url) {
+                finalAvatarUrl = profile.avatar_url;
+            } else if (profile.avatar_color && profile.username) {
+                // If they have a custom color but no image, use the custom color
+                const colorCode = profile.avatar_color.replace('#', '');
+                finalAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.username)}&background=${colorCode}&color=fff&size=128`;
+            }
+        }
+        
+        const desktopAvatar = document.getElementById('desktop-avatar');
+        const mobileAvatar = document.getElementById('mobile-avatar');
+        
+        if(desktopAvatar) desktopAvatar.src = finalAvatarUrl;
+        if(mobileAvatar) mobileAvatar.src = finalAvatarUrl;
+    });
+
+    document.getElementById('createRoomBtn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return;
+        
+        const userId = session.user.id;
+        // Generate random 6-digit code
+        const roomCode = 'FM-' + Math.floor(100000 + Math.random() * 900000);
+        
+        // 1. Create Room
+        const { data: roomData, error: roomError } = await supabaseClient
+            .from('rooms')
+            .insert([{ room_code: roomCode, host_id: userId, status: 'waiting' }])
+            .select()
+            .single();
+            
+        if (roomError) {
+            alert('เกิดข้อผิดพลาดในการสร้างห้อง: ' + roomError.message);
+            return;
+        }
+
+        const roomId = roomData.id;
+        
+        // Use upsert to join the new room without deleting history from old rooms
+        const { error: memberError } = await supabaseClient
+            .from('room_members')
+            .upsert([{ room_id: roomId, user_id: userId, is_ready: true }]);
+            
+        if (memberError) {
+            alert('เกิดข้อผิดพลาดในการเข้าห้อง: ' + memberError.message);
+            return;
+        }
+
+        // 3. Redirect to lobby
+        window.location.href = `lobby.html?id=${roomId}`;
+    });
+
+    // Solo Mode logic
+    document.getElementById('soloSwipeBtn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return;
+        
+        const userId = session.user.id;
+        const roomCode = 'SOLO-' + Math.floor(100000 + Math.random() * 900000);
+        
+        // 1. Create Room (status playing because no lobby needed)
+        const { data: roomData, error: roomError } = await supabaseClient
+            .from('rooms')
+            .insert([{ room_code: roomCode, host_id: userId, status: 'playing' }])
+            .select()
+            .single();
+            
+        if (roomError) {
+            alert('เกิดข้อผิดพลาดในการสร้างห้อง: ' + roomError.message);
+            return;
+        }
+
+        const roomId = roomData.id;
+
+        // Use upsert to join the new room without deleting history from old rooms
+        const { error: memberError } = await supabaseClient
+            .from('room_members')
+            .upsert([{ room_id: roomId, user_id: userId, is_ready: true }]);
+            
+        if (memberError) {
+            alert('เกิดข้อผิดพลาดในการเข้าห้อง: ' + memberError.message);
+            return;
+        }
+
+        // 3. Redirect directly to swipe arena
+        window.location.href = `../play/swipe.html?id=${roomId}`;
+    });
+</script>
+</body>
+</html>
+
+

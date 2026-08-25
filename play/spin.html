@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สุ่มมื้ออร่อย - FeedMatch</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Noto Sans Thai', 'Inter', sans-serif; 
+        }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+    </style>
+    <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
+</head>
+<body class="min-h-screen w-full bg-gray-50 flex flex-col text-gray-800">
+
+    <!-- Standard Header -->
+    <header class="w-full bg-white shadow-sm px-8 py-4 relative z-20 flex justify-between items-center shrink-0 sticky top-0">
+        <!-- Left: Logo -->
+        <div class="flex items-center">
+            <img src="../assets/images/Logoremovebg.png" alt="FeedMatch Logo" class="h-16 w-auto object-contain">
+        </div>
+
+        <!-- Right: Close Button -->
+        <a id="close-btn" href="#" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </a>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex items-center justify-center p-4 mt-8 mb-12">
+        <div class="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-8 md:p-10 border border-gray-100 text-center">
+
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">สุ่มมื้อเด็ด</h1>
+            <p class="text-gray-500 mb-10 text-sm">ให้เราช่วยเลือกร้านอาหารที่ใช่สำหรับคุณ</p>
+
+            <!-- Dynamic Text Area -->
+            <div class="w-full h-32 flex items-center justify-center bg-gray-50 rounded-2xl border border-gray-100 mb-10 shadow-inner">
+                <span id="spin-result" class="text-2xl font-bold text-gray-400 transition-all duration-300 transform">กดปุ่มเพื่อเริ่มสุ่ม</span>
+            </div>
+
+            <!-- Action Area -->
+            <div class="w-full">
+                <!-- Initial Button -->
+                <button id="spin-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold py-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                    เริ่มสุ่มเลย!
+                </button>
+
+                <!-- Hidden initially, shown when result is picked -->
+                <div id="action-buttons" class="w-full hidden flex-col gap-4">
+                    <a href="../play/map_navigation.html" class="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold py-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                        ตำแหน่งที่ตั้ง
+                    </a>
+                    <button id="reset-btn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-lg font-bold py-4 rounded-xl transition-all duration-300">
+                        สุ่มใหม่
+                    </button>
+                </div>
+            </div>
+
+            <!-- Link -->
+            <a href="../play/liked_list.html" id="view-list-link" class="inline-block mt-8 text-gray-400 font-medium hover:text-gray-600 transition-colors text-sm underline underline-offset-4">
+                ดูผลโหวตของทั้งห้อง
+            </a>
+        </div>
+    </main>
+
+    <!-- Confetti JS -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('id');
+
+        const spinBtn = document.getElementById('spin-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const actionButtons = document.getElementById('action-buttons');
+        const resultText = document.getElementById('spin-result');
+        const viewListLink = document.getElementById('view-list-link');
+
+        let spinInterval;
+        let finalMatch = null;
+        let finalMatchId = null;
+        let candidates = ["กำลังโหลดข้อมูล..."];
+
+        // Initialize data
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!roomId) {
+                window.location.href = '../index.html';
+                return;
+            }
+
+            // Set links with roomId
+            viewListLink.href = `../play/liked_list.html?id=${roomId}`;
+            document.getElementById('close-btn').href = `swipe.html?id=${roomId}`;
+
+            // Fetch the final match
+            const { data: matchData, error: matchError } = await supabaseClient
+                .from('matches')
+                .select('restaurant_id, restaurants(*)')
+                .eq('room_id', roomId)
+                .limit(1);
+            
+            if (matchError || !matchData || matchData.length === 0) {
+                alert('เกิดข้อผิดพลาดในการโหลดผลลัพธ์: ' + (matchError ? matchError.message : 'ไม่พบข้อมูล'));
+                // If match doesn't exist (e.g. user deleted a like and broke the match), go back to swipe
+                window.location.href = `swipe.html?id=${roomId}`;
+                return;
+            } else {
+                finalMatch = matchData[0].restaurants;
+                finalMatchId = matchData[0].restaurant_id;
+            }
+
+            // Fetch liked restaurants in the room to use as spinning candidates
+            const { data: swipesData } = await supabaseClient
+                .from('swipes')
+                .select('restaurant_id, restaurants(name)')
+                .eq('room_id', roomId)
+                .eq('is_liked', true);
+            if (swipesData && swipesData.length > 0) {
+                // Extract unique restaurants
+                const uniqueRestaurants = new Map();
+                swipesData.forEach(s => {
+                    if (s.restaurants) {
+                        uniqueRestaurants.set(s.restaurant_id, {
+                            id: s.restaurant_id,
+                            name: s.restaurants.name
+                        });
+                    }
+                });
+                candidates = Array.from(uniqueRestaurants.values());
+            } else {
+                candidates = [
+                    { id: 1, name: "สเต็กเนื้อวากิว" },
+                    { id: 2, name: "ซูชิเซ็ตพิเศษ" },
+                    { id: 3, name: "ผัดไทยกุ้งสด" },
+                    { id: 4, name: "ข้าวมันไก่สิงคโปร์" },
+                    { id: 5, name: "ชาบูหม่าล่า" }
+                ];
+            }
+
+            // Fetch current user session
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            let currentUser = session ? session.user : null;
+
+            // Optional: Update the link text dynamically based on the total likes in the room
+            const { count } = await supabaseClient
+                .from('swipes')
+                .select('*', { count: 'exact', head: true })
+                .eq('room_id', roomId)
+                .eq('is_liked', true);
+            
+            if (count !== null) {
+                // Since multiple people can like the same place, 'count' is total swipes. 
+                // We'll just show the static text for now, or just the number of total swipes.
+                viewListLink.textContent = `ดูผลโหวตของทั้งห้อง (${count} โหวต)`;
+            }
+
+            // Fetch member count to handle Solo mode exit
+            let memberCount = 1;
+            const { count: mCount } = await supabaseClient
+                .from('room_members')
+                .select('*', { count: 'exact', head: true })
+                .eq('room_id', roomId);
+            if (mCount) memberCount = mCount;
+
+            const closeBtn = document.getElementById('close-btn');
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Just go back to main menu. Data remains so history can display it.
+                window.location.href = '../room/main.html';
+            });
+        });
+
+        spinBtn.addEventListener('click', () => {
+            if (!finalMatch) {
+                alert("เกิดข้อผิดพลาดในการโหลดผลลัพธ์ หรือยังไม่มีผลลัพธ์");
+                return;
+            }
+
+            // Hide initial elements
+            spinBtn.classList.add('hidden');
+            viewListLink.classList.add('hidden');
+            
+            // Reset text styling
+            resultText.classList.remove('text-orange-500', 'scale-110');
+            resultText.classList.add('text-gray-800');
+
+            let counter = 0;
+            const maxSpins = 30; // number of rapid changes
+            const speed = 70; // ms between changes
+
+            spinInterval = setInterval(() => {
+                // Pick a random item
+                let randomItem = candidates[Math.floor(Math.random() * candidates.length)];
+                resultText.textContent = randomItem.name;
+                
+                counter++;
+                
+                if (counter >= maxSpins) {
+                    clearInterval(spinInterval);
+                    finishSpin();
+                }
+            }, speed);
+        });
+
+        function finishSpin() {
+            // Animate winner text
+            resultText.innerHTML = `<span class="text-3xl">${finalMatch.name}</span>`;
+            resultText.classList.remove('text-gray-800');
+            resultText.classList.add('text-orange-500', 'scale-110');
+            
+            // Set map link
+            const mapBtn = actionButtons.querySelector('a');
+            if (finalMatch) {
+                mapBtn.href = `map_navigation.html?id=${finalMatchId}&room_id=${roomId}`;
+                mapBtn.target = "_self";
+                mapBtn.style.display = 'block';
+            } else {
+                mapBtn.style.display = 'none';
+            }
+
+            // Show action buttons
+            actionButtons.classList.remove('hidden');
+            actionButtons.classList.add('flex');
+
+            // Trigger confetti
+            triggerConfetti();
+        }
+
+        function triggerConfetti() {
+            const duration = 3000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#F97316', '#EF4444', '#FCD34D'],
+                    zIndex: 300
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#F97316', '#EF4444', '#FCD34D'],
+                    zIndex: 300
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        document.getElementById('close-btn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (roomId) {
+                await supabaseClient.from('rooms').update({ status: 'completed' }).eq('id', roomId);
+            }
+            window.location.href = '../room/main.html';
+        });
+
+        resetBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            // Remove the current winner from candidates
+            candidates = candidates.filter(c => c.id !== finalMatchId);
+
+            if (candidates.length === 0) {
+                alert("ไม่มีร้านอาหารเหลือให้สุ่มแล้วครับ!");
+                return;
+            }
+
+            // Hide action buttons and trigger spin animation again
+            actionButtons.classList.add('hidden');
+            actionButtons.classList.remove('flex');
+            resultText.classList.remove('text-orange-500', 'scale-110');
+            resultText.classList.add('text-gray-800');
+
+            let counter = 0;
+            const maxSpins = 30; // number of rapid changes
+            const speed = 70; // ms between changes
+
+            // Pick a new winner randomly from remaining candidates
+            const newWinner = candidates[Math.floor(Math.random() * candidates.length)];
+            
+            // Update DB so others see the new match too
+            if (roomId) {
+                await supabaseClient.from('matches')
+                    .update({ restaurant_id: newWinner.id })
+                    .eq('room_id', roomId);
+            }
+
+            // Update local variables
+            finalMatch = newWinner; 
+            finalMatchId = newWinner.id;
+
+            spinInterval = setInterval(() => {
+                // Pick a random item just for visual spinning
+                let randomItem = candidates[Math.floor(Math.random() * candidates.length)];
+                resultText.textContent = randomItem.name;
+                
+                counter++;
+                
+                if (counter >= maxSpins) {
+                    clearInterval(spinInterval);
+                    finishSpin(); // Uses finalMatch.name
+                }
+            }, speed);
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+

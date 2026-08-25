@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สแกนคิวอาร์โค้ด - FeedMatch</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Prompt) -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- HTML5-QRCode -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        
+        /* Custom overrides for the html5-qrcode injected elements to match theme */
+        #reader {
+            border: none !important; /* Override default inline border */
+        }
+        #reader__dashboard_section_csr span {
+            color: #9ca3af !important; /* gray-400 */
+        }
+        #reader button {
+            background-color: #f97316 !important; /* orange-500 */
+            color: white !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 8px !important;
+            margin-top: 10px !important;
+            font-family: 'Prompt', sans-serif !important;
+            font-size: 14px !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s !important;
+        }
+        #reader button:hover {
+            background-color: #ea580c !important; /* orange-600 */
+        }
+        #reader select {
+            padding: 8px !important;
+            border-radius: 8px !important;
+            border: 1px solid #374151 !important;
+            background-color: #111827 !important;
+            color: white !important;
+            font-family: 'Prompt', sans-serif !important;
+            margin-bottom: 10px !important;
+            outline: none !important;
+        }
+        #reader__scan_region {
+            background-color: #000;
+        }
+    </style>
+    <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
+</head>
+<body class="min-h-screen bg-black text-white flex flex-col overflow-hidden">
+
+    <!-- Top Navigation Bar -->
+    <header class="w-full px-8 py-4 flex justify-between items-center z-50 relative bg-black/50 backdrop-blur-md shrink-0 border-b border-gray-800">
+        <!-- Left: Logo -->
+        <div class="flex items-center">
+            <!-- Note: You might want a white version of the logo here if the current one is dark, but using the default for consistency -->
+            <img src="../assets/images/Logoremovebg.png" alt="FeedMatch Logo" class="h-16 w-auto object-contain brightness-0 invert">
+        </div>
+        
+        <!-- Right: Cancel Button -->
+        <a href="join.html" class="text-sm font-medium text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+            ยกเลิก
+        </a>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col items-center justify-center p-6 relative">
+        
+        <!-- Camera Viewfinder -->
+        <div class="w-full max-w-sm mx-auto overflow-hidden rounded-[2rem] border-2 border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.25)] bg-gray-900 relative">
+            <div id="reader" class="w-full"></div>
+        </div>
+
+        <!-- Helper Text -->
+        <p class="text-gray-400 mt-8 text-center text-sm font-medium tracking-wide leading-relaxed">
+            จัดคิวอาร์โค้ดให้อยู่ในกรอบ<br>เพื่อเข้าร่วมห้อง
+        </p>
+
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Initialize HTML5 QR Code scanner
+            const html5QrCode = new Html5Qrcode("reader");
+
+            // Config for scanner
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0 // Keep it square-ish inside our container
+            };
+
+            // Success Callback
+            const onScanSuccess = (decodedText, decodedResult) => {
+                // Handle the scanned code (e.g. FM-123456)
+                console.log(`Scan result: ${decodedText}`);
+                
+                // Play a brief success haptic/sound feedback if available
+                if (window.navigator && window.navigator.vibrate) {
+                    window.navigator.vibrate(100);
+                }
+
+                // Stop the scanner to save battery and freeze frame
+                html5QrCode.stop().then(() => {
+                    // Redirect to lobby
+                    window.location.href = 'lobby.html';
+                }).catch((err) => {
+                    // If stop fails, redirect anyway
+                    window.location.href = 'lobby.html';
+                });
+            };
+
+            // Error Callback (called very frequently for every frame without a QR code)
+            const onScanFailure = (error) => {
+                // Keep it silent to not clutter the console
+            };
+
+            // Start scanner, preferring rear camera
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                onScanSuccess, 
+                onScanFailure
+            ).catch((err) => {
+                console.error("Camera start failed:", err);
+                
+                // Fallback UI if camera permission is denied or no camera found
+                document.getElementById("reader").innerHTML = `
+                    <div class="p-8 text-center text-red-400 flex flex-col items-center justify-center aspect-square">
+                        <i class="ph-fill ph-camera-slash text-5xl mb-4 text-gray-600"></i>
+                        <p class="text-sm text-gray-300">ไม่สามารถเข้าถึงกล้องได้<br>โปรดอนุญาตการใช้งานกล้องในเบราว์เซอร์</p>
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>
