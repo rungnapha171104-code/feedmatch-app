@@ -96,6 +96,10 @@
         const code = urlParams.get('code');
         if (code) {
             document.getElementById('room-code-input').value = code;
+            // Auto join if code is provided in URL (e.g. from scanning QR)
+            setTimeout(() => {
+                document.getElementById('joinRoomBtn').click();
+            }, 300);
         }
     });
 

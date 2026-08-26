@@ -112,6 +112,11 @@
         }
 
         document.getElementById('user-name').textContent = username;
+
+        // Set avatar
+        if (user.user_metadata?.avatar_url) {
+            document.getElementById('user-avatar').innerHTML = `<img src="${user.user_metadata.avatar_url}" alt="Avatar" class="w-full h-full object-cover rounded-full">`;
+        }
         
         // Set Avatar
         const avatarDiv = document.getElementById('user-avatar');

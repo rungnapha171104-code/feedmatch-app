@@ -129,7 +129,7 @@
 </a>
 
 <!-- Card 2: Join Room (Secondary) -->
-<a href="../room/join.html" class="block glass-card rounded-3xl p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-orange-200 transition-all duration-300 cursor-pointer group">
+<a id="joinRoomBtn" href="../room/join.html" class="block glass-card rounded-3xl p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-orange-200 transition-all duration-300 cursor-pointer group">
     <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 mb-6 group-hover:scale-110 group-hover:bg-orange-100 transition-all duration-300">
         <i class="ph ph-qr-code text-3xl"></i>
     </div>
@@ -196,7 +196,12 @@
 
         let finalAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=F97316&color=fff&size=128`;
 
+        window.userHasLocation = true; // default
         if (profile) {
+            if (!profile.lat || !profile.lng) {
+                window.userHasLocation = false;
+            }
+
             if (profile.avatar_url) {
                 finalAvatarUrl = profile.avatar_url;
             } else if (profile.avatar_color && profile.username) {
@@ -216,6 +221,12 @@
     document.getElementById('createRoomBtn').addEventListener('click', async (e) => {
         e.preventDefault();
         
+        if (window.userHasLocation === false) {
+            alert('กรุณาตั้งค่าตำแหน่งที่ตั้งในหน้าการตั้งค่าก่อนสร้างห้องครับ');
+            window.location.href = '../user/settings.html';
+            return;
+        }
+
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (!session) return;
         
@@ -255,6 +266,12 @@
     document.getElementById('soloSwipeBtn').addEventListener('click', async (e) => {
         e.preventDefault();
         
+        if (window.userHasLocation === false) {
+            alert('กรุณาตั้งค่าตำแหน่งที่ตั้งในหน้าการตั้งค่าก่อนเริ่มสุ่มครับ');
+            window.location.href = '../user/settings.html';
+            return;
+        }
+
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (!session) return;
         
@@ -287,6 +304,14 @@
 
         // 3. Redirect directly to swipe arena
         window.location.href = `../play/swipe.html?id=${roomId}`;
+    });
+
+    document.getElementById('joinRoomBtn').addEventListener('click', (e) => {
+        if (window.userHasLocation === false) {
+            e.preventDefault();
+            alert('กรุณาตั้งค่าตำแหน่งที่ตั้งในหน้าการตั้งค่าก่อนเข้าร่วมห้องครับ');
+            window.location.href = '../user/settings.html';
+        }
     });
 </script>
 </body>

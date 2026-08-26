@@ -15,7 +15,7 @@
     </style>
     <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
 </head>
-<body class="min-h-screen bg-gray-50 flex flex-col">
+<body class="h-screen bg-gray-50 flex flex-col overflow-hidden">
 
     <!-- Top Navigation Bar -->
     <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-50 w-full shrink-0">
@@ -54,7 +54,7 @@
             <!-- Copy Button -->
             <button onclick="copyLink()" class="flex items-center gap-2 text-gray-400 hover:text-orange-500 font-medium text-sm transition-colors px-5 py-2.5 rounded-full border border-transparent hover:bg-orange-50 hover:border-orange-100">
                 <i class="ph ph-copy text-lg"></i>
-                คัดลอกลิงก์
+                คัดลอกรหัส
             </button>
         </div>
 
@@ -269,11 +269,10 @@
             }
         });
 
-        // Copy Link logic
+        // Copy Room Code logic
         function copyLink() {
-            const url = window.location.origin + '/room/join.html?code=' + roomCode;
-            navigator.clipboard.writeText(url).then(() => {
-                alert('คัดลอกลิงก์เชิญเพื่อนเรียบร้อยแล้ว!');
+            navigator.clipboard.writeText(roomCode).then(() => {
+                alert('คัดลอกรหัสห้องเรียบร้อยแล้ว!');
             }).catch(() => {
                 // Fallback for some browsers
                 alert('รหัสห้องของคุณคือ: ' + roomCode);

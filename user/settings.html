@@ -10,6 +10,8 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+        <!-- Phosphor Icons -->
+        <script src="https://unpkg.com/@phosphor-icons/web"></script>
         <style>
         body {
             font-family: 'Noto Sans Thai', 'Inter', sans-serif;
@@ -53,10 +55,32 @@
             border-color: #000;
             box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
+        /* Hide scrollbar completely */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Custom Scrollbar for modal */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e5e7eb;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #d1d5db;
+        }
         </style>
     <link rel="icon" type="image/png" href="../assets/images/Logoremovebg.png">
 </head>
-<body class="min-h-screen bg-white flex flex-col text-gray-800">
+<body class="min-h-screen bg-gray-50 flex flex-col text-gray-800">
 
     <!-- Standard Header -->
     <header class="w-full bg-white shadow-sm px-8 py-4 relative z-20 flex justify-between items-center shrink-0">
@@ -67,74 +91,80 @@
 
     <!-- Right: Back Button -->
     <a href="../room/main.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors duration-200 shadow-sm border border-gray-100">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 pr-0.5">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
     </a>
     </header>
 
 <!-- Main Container -->
-<main class="w-full max-w-2xl mx-auto px-6 pb-12 flex-grow flex flex-col">
-
-    <div class="space-y-8 mt-6">
+<main class="w-full max-w-3xl mx-auto px-4 mt-8 pb-20 flex-grow">
+    
+    <div class="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-100 space-y-4">
 
         <!-- Section 1: Current Location -->
-        <section class="border-b border-gray-100 pb-8">
-            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">ตำแหน่งที่ตั้ง</h2>
-            <div class="flex justify-between items-end">
+        <section class="border-b border-gray-100 pb-4">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">ตำแหน่งที่ตั้ง</h2>
+            <div class="flex flex-col gap-3">
                 <div class="flex items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-orange-500">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                    </svg>
-                <span class="text-xl font-medium" id="location-text">กำลังโหลด...</span>
+                    <div class="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center text-orange-500 shadow-sm shrink-0">
+                        <i class="ph ph-map-pin text-xl"></i>
+                    </div>
+                    <span class="text-lg font-medium text-gray-800 line-clamp-1" id="location-text">กำลังโหลด...</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="change-location-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-100 hover:text-gray-800 transition-all border border-gray-200 shadow-sm">
+                        <i class="ph ph-crosshair text-lg"></i>
+                        ตำแหน่งปัจจุบัน
+                    </button>
+                    <button type="button" id="select-province-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-orange-50 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-100 hover:text-orange-700 transition-all border border-orange-200 shadow-sm">
+                        <i class="ph ph-map-trifold text-lg"></i>
+                        เลือกจังหวัด
+                    </button>
+                </div>
             </div>
-        <button type="button" id="change-location-btn" class="text-sm text-gray-400 hover:text-orange-500 transition-colors underline decoration-gray-200 underline-offset-4">
-                        เปลี่ยน
-        </button>
-</div>
-</section>
+        </section>
 
 <!-- Section 2: Distance Radius -->
-<section class="border-b border-gray-100 pb-8">
-    <div class="flex justify-between items-center mb-6">
+<section class="border-b border-gray-100 pb-4">
+    <div class="flex justify-between items-center mb-3">
         <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">ระยะทางสูงสุด</h2>
-        <span class="text-2xl font-semibold text-gray-800" id="distance-badge">5<span class="text-lg text-gray-400 font-medium ml-1">กม.</span></span>
+        <span class="text-2xl font-semibold text-gray-800" id="distance-badge">5<span class="text-sm text-gray-400 font-medium ml-1">กม.</span></span>
     </div>
 
-<div class="px-1 mt-2">
-    <input type="range" min="1" max="20" value="5" class="w-full" id="distance-slider" oninput="document.getElementById('distance-badge').innerHTML = this.value + '<span class=\'text-lg text-gray-400 font-medium ml-1\'>กม.</span>'">
-<div class="flex justify-between text-xs text-gray-300 mt-4 font-light">
+<div class="px-1 mt-1">
+    <input type="range" min="1" max="40" value="5" class="w-full" id="distance-slider" oninput="document.getElementById('distance-badge').innerHTML = this.value + '<span class=\'text-sm text-gray-400 font-medium ml-1\'>กม.</span>'">
+<div class="flex justify-between text-[10px] text-gray-300 mt-2 font-light">
     <span>1 กม.</span>
-    <span>20 กม.</span>
+    <span>40 กม.</span>
 </div>
 </div>
 </section>
 
 <!-- Section 3: Price Level Preference -->
-<section class="pb-8">
-    <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-6">ระดับราคา</h2>
-    <div class="grid grid-cols-3 gap-3">
+<section class="pb-4">
+    <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">ระดับราคา</h2>
+    <div class="grid grid-cols-3 gap-2">
         <div>
             <input type="checkbox" id="price-budget" value="ประหยัด" class="radio-custom price-level-cb">
-            <label for="price-budget" class="block w-full text-center border border-gray-200 rounded-xl py-3 font-medium text-gray-500 cursor-pointer transition-all">ประหยัด</label>
+            <label for="price-budget" class="block w-full text-center border border-gray-200 rounded-xl py-2 text-sm font-medium text-gray-500 cursor-pointer transition-all">ประหยัด</label>
         </div>
         <div>
             <input type="checkbox" id="price-medium" value="ปานกลาง" class="radio-custom price-level-cb">
-            <label for="price-medium" class="block w-full text-center border border-gray-200 rounded-xl py-3 font-medium text-gray-500 cursor-pointer transition-all">ปานกลาง</label>
+            <label for="price-medium" class="block w-full text-center border border-gray-200 rounded-xl py-2 text-sm font-medium text-gray-500 cursor-pointer transition-all">ปานกลาง</label>
         </div>
         <div>
             <input type="checkbox" id="price-luxury" value="หรูหรา" class="radio-custom price-level-cb">
-            <label for="price-luxury" class="block w-full text-center border border-gray-200 rounded-xl py-3 font-medium text-gray-500 cursor-pointer transition-all">หรูหรา</label>
+            <label for="price-luxury" class="block w-full text-center border border-gray-200 rounded-xl py-2 text-sm font-medium text-gray-500 cursor-pointer transition-all">หรูหรา</label>
         </div>
     </div>
-    <p class="text-xs text-gray-400 mt-3 text-center">สามารถเลือกได้มากกว่า 1 ระดับ (หากไม่เลือก จะแสดงทั้งหมด)</p>
+    <p class="text-[10px] text-gray-400 mt-2 text-center">สามารถเลือกได้มากกว่า 1 ระดับ (หากไม่เลือก จะแสดงทั้งหมด)</p>
 </section>
 
 <!-- Section 4: Preferred Categories -->
-<section class="pb-8 border-t border-gray-100 pt-8">
-    <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">ประเภทร้านอาหารที่อยากกิน</h2>
-    <div class="flex flex-wrap gap-3" id="diet-container">
+<section class="pb-2 border-t border-gray-100 pt-4">
+    <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">ประเภทร้านอาหารที่อยากกิน</h2>
+    <div class="flex flex-wrap gap-2" id="diet-container">
         <!-- Categories will be injected here dynamically -->
         <p class="text-sm text-gray-400">กำลังโหลดหมวดหมู่...</p>
     </div>
@@ -143,10 +173,75 @@
 </div>
 
 <!-- Save Action -->
-<div class="mt-auto pt-8">
-    <a href="../room/main.html" id="save-settings-btn" class="block w-full bg-orange-500 hover:bg-orange-600 text-white text-lg text-center font-medium py-4 rounded-2xl transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
+<div class="mt-8 mb-12 max-w-3xl mx-auto">
+    <a href="../room/main.html" id="save-settings-btn" class="block w-full bg-orange-500 hover:bg-orange-600 text-white text-base text-center font-bold py-4 rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
                 บันทึกการตั้งค่า
     </a>
+</div>
+
+<!-- Province Selection Modal -->
+<div id="province-modal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="bg-white rounded-3xl w-11/12 max-w-sm p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="province-modal-content">
+        <div class="flex justify-between items-center mb-5">
+            <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="ph ph-map-trifold text-orange-500"></i>
+                เลือกจังหวัด
+            </h3>
+            <button type="button" id="close-province-modal" class="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 p-1.5 rounded-full">
+                <i class="ph ph-x text-lg"></i>
+            </button>
+        </div>
+        <div class="max-h-[60vh] overflow-y-auto space-y-2.5 mb-2 pr-1 custom-scrollbar">
+            <button class="province-btn w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group" data-lat="13.7563" data-lng="100.5018" data-name="กรุงเทพมหานคร">
+                <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors">
+                    <i class="ph ph-buildings"></i>
+                </div>
+                <span class="font-medium text-gray-700 group-hover:text-orange-600">กรุงเทพมหานคร</span>
+            </button>
+            <button class="province-btn w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group" data-lat="18.7953" data-lng="98.9620" data-name="เชียงใหม่">
+                <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors">
+                    <i class="ph ph-mountains"></i>
+                </div>
+                <span class="font-medium text-gray-700 group-hover:text-orange-600">เชียงใหม่</span>
+            </button>
+            <button class="province-btn w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group" data-lat="7.9519" data-lng="98.3381" data-name="ภูเก็ต">
+                <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors">
+                    <i class="ph ph-waves"></i>
+                </div>
+                <span class="font-medium text-gray-700 group-hover:text-orange-600">ภูเก็ต</span>
+            </button>
+            <button class="province-btn w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group" data-lat="13.3611" data-lng="100.9847" data-name="ชลบุรี">
+                <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors">
+                    <i class="ph ph-umbrella"></i>
+                </div>
+                <span class="font-medium text-gray-700 group-hover:text-orange-600">ชลบุรี</span>
+            </button>
+            <button class="province-btn w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group" data-lat="14.9799" data-lng="102.0978" data-name="นครราชสีมา">
+                <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors">
+                    <i class="ph ph-map-pin"></i>
+                </div>
+                <span class="font-medium text-gray-700 group-hover:text-orange-600">นครราชสีมา</span>
+            </button>
+            <button class="province-btn w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group" data-lat="16.4322" data-lng="102.8236" data-name="ขอนแก่น">
+                <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors">
+                    <i class="ph ph-map-pin"></i>
+                </div>
+                <span class="font-medium text-gray-700 group-hover:text-orange-600">ขอนแก่น</span>
+            </button>
+            <button class="province-btn w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group" data-lat="7.0094" data-lng="100.4735" data-name="สงขลา">
+                <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors">
+                    <i class="ph ph-map-pin"></i>
+                </div>
+                <span class="font-medium text-gray-700 group-hover:text-orange-600">สงขลา</span>
+            </button>
+            <button class="province-btn w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group" data-lat="12.5657" data-lng="99.9579" data-name="ประจวบคีรีขันธ์">
+                <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors">
+                    <i class="ph ph-waves"></i>
+                </div>
+                <span class="font-medium text-gray-700 group-hover:text-orange-600">ประจวบคีรีขันธ์</span>
+            </button>
+        </div>
+    </div>
 </div>
 
 </main>
@@ -359,6 +454,44 @@
     }
 
     changeLocationBtn.addEventListener('click', fetchCurrentLocation);
+
+    // Province Modal Logic
+    const selectProvinceBtn = document.getElementById('select-province-btn');
+    const provinceModal = document.getElementById('province-modal');
+    const provinceModalContent = document.getElementById('province-modal-content');
+    const closeProvinceModalBtn = document.getElementById('close-province-modal');
+    const provinceBtns = document.querySelectorAll('.province-btn');
+
+    function openModal() {
+        provinceModal.classList.remove('hidden');
+        // trigger reflow
+        void provinceModal.offsetWidth;
+        provinceModal.classList.remove('opacity-0', 'pointer-events-none');
+        provinceModalContent.classList.remove('scale-95');
+        provinceModalContent.classList.add('scale-100');
+    }
+
+    function closeModal() {
+        provinceModal.classList.add('opacity-0', 'pointer-events-none');
+        provinceModalContent.classList.remove('scale-100');
+        provinceModalContent.classList.add('scale-95');
+        setTimeout(() => {
+            provinceModal.classList.add('hidden');
+        }, 300);
+    }
+
+    selectProvinceBtn.addEventListener('click', openModal);
+    closeProvinceModalBtn.addEventListener('click', closeModal);
+
+    provinceBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentLat = parseFloat(btn.dataset.lat);
+            currentLng = parseFloat(btn.dataset.lng);
+            currentLocationName = btn.dataset.name;
+            locationText.innerText = currentLocationName;
+            closeModal();
+        });
+    });
 
     loadSettings();
 </script>

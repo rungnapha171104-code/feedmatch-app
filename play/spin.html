@@ -76,8 +76,7 @@
         </div>
     </main>
 
-    <!-- Confetti JS -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Confetti JS Removed -->
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/supabase-config.js"></script>
@@ -99,6 +98,7 @@
         let candidates = ["กำลังโหลดข้อมูล..."];
         let isHost = false;
         let roomChannel;
+        let usedWinnerIds = new Set();
 
         // Initialize data
         document.addEventListener('DOMContentLoaded', async () => {
@@ -126,6 +126,7 @@
             } else {
                 finalMatch = matchData[0].restaurants;
                 finalMatchId = matchData[0].restaurant_id;
+                usedWinnerIds.add(finalMatchId);
             }
 
             // Fetch liked restaurants in the room to use as spinning candidates
@@ -225,6 +226,7 @@
             const winner = candidates.find(c => c.id === winnerId) || finalMatch;
             finalMatch = winner;
             finalMatchId = winner.id;
+            usedWinnerIds.add(finalMatchId);
 
             // Hide initial elements
             spinBtn.classList.add('hidden');
@@ -244,7 +246,7 @@
             const speed = 70; // ms between changes
 
             spinInterval = setInterval(() => {
-                // Pick a random item
+                // Pick a random item from ALL original candidates to keep the visual effect intense
                 let randomItem = candidates[Math.floor(Math.random() * candidates.length)];
                 resultText.textContent = randomItem.name;
                 
@@ -283,37 +285,9 @@
                 resetBtn.classList.add('hidden');
             }
 
-            // Trigger confetti
-            triggerConfetti();
+
         }
 
-        function triggerConfetti() {
-            const duration = 3000;
-            const end = Date.now() + duration;
-
-            (function frame() {
-                confetti({
-                    particleCount: 5,
-                    angle: 60,
-                    spread: 55,
-                    origin: { x: 0 },
-                    colors: ['#F97316', '#EF4444', '#FCD34D'],
-                    zIndex: 300
-                });
-                confetti({
-                    particleCount: 5,
-                    angle: 120,
-                    spread: 55,
-                    origin: { x: 1 },
-                    colors: ['#F97316', '#EF4444', '#FCD34D'],
-                    zIndex: 300
-                });
-
-                if (Date.now() < end) {
-                    requestAnimationFrame(frame);
-                }
-            }());
-        }
 
         document.getElementById('close-btn').addEventListener('click', async (e) => {
             e.preventDefault();
@@ -327,33 +301,35 @@
             e.preventDefault();
             if (!isHost) return;
             
-            // Remove the current winner from candidates
-            candidates = candidates.filter(c => c.id !== finalMatchId);
+            // Pick a new winner randomly from remaining candidates that haven't won yet
+            const remainingCandidates = candidates.filter(c => !usedWinnerIds.has(c.id));
 
-            if (candidates.length === 0) {
-                alert("ไม่มีร้านอาหารเหลือให้สุ่มแล้วครับ!");
+            if (remainingCandidates.length === 0) {
+                alert("ไม่มีร้านอาหารเหลือให้สุ่มแล้วครับ! (สุ่มครบทุกร้านที่โหวตแล้ว)");
                 return;
             }
 
-            // Pick a new winner randomly from remaining candidates
-            const newWinner = candidates[Math.floor(Math.random() * candidates.length)];
+            const newWinner = remainingCandidates[Math.floor(Math.random() * remainingCandidates.length)];
             
-            // Update DB so others see the new match too if they reload
-            if (roomId) {
-                await supabaseClient.from('matches')
-                    .update({ restaurant_id: newWinner.id })
-                    .eq('room_id', roomId);
-            }
-
-            // Broadcast the event
+            // Broadcast the event immediately so everyone sees it start at the same time
             roomChannel.send({
                 type: 'broadcast',
                 event: 'spin_start',
                 payload: { winnerId: newWinner.id }
             });
 
-            // Start locally
+            // Start locally instantly
             startSpinningAnimation(newWinner.id);
+
+            // Update DB in the background (no await) so others see the new match too if they reload
+            if (roomId) {
+                supabaseClient.from('matches')
+                    .update({ restaurant_id: newWinner.id })
+                    .eq('room_id', roomId)
+                    .then(({error}) => {
+                        if(error) console.error("Error updating new match:", error);
+                    });
+            }
         });
     </script>
 </body>
