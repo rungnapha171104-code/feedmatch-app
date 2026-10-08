@@ -340,11 +340,17 @@
             let hostLat = null;
             let hostLng = null;
             let hostMaxDistance = 10; // default 10km
+            
+            // For calculating distance for the current user
+            let userLat = null;
+            let userLng = null;
 
             if (members && members.length > 0) {
                 const memberIds = members.map(m => m.user_id);
                 // Also make sure hostId is in the list, though it should be if they are a member
                 if (!memberIds.includes(hostId)) memberIds.push(hostId);
+                // Also make sure currentUser.id is in the list
+                if (!memberIds.includes(currentUser.id)) memberIds.push(currentUser.id);
 
                 const { data: profiles } = await supabaseClient
                     .from('profiles')
@@ -359,6 +365,12 @@
                         hostMaxDistance = hostProfile.max_distance || 10;
                         groupRestrictions = hostProfile.dietary_restrictions || [];
                         groupPriceLevels = hostProfile.price_levels || [];
+                    }
+                    
+                    const userProfile = profiles.find(p => p.id === currentUser.id);
+                    if (userProfile) {
+                        userLat = userProfile.lat;
+                        userLng = userProfile.lng;
                     }
                 }
             }
@@ -426,6 +438,19 @@
                         if (!r.lat || !r.lng) return true; // If restaurant has no coords, don't filter it out
                         const dist = calculateDistance(hostLat, hostLng, r.lat, r.lng);
                         return dist !== null && dist <= hostMaxDistance;
+                    });
+                }
+                
+                // Calculate real distance for the current user to show on UI
+                if (userLat && userLng) {
+                    filtered = filtered.map(r => {
+                        if (r.lat && r.lng) {
+                            const realDist = calculateDistance(userLat, userLng, r.lat, r.lng);
+                            if (realDist !== null) {
+                                r.distance_km = realDist.toFixed(1);
+                            }
+                        }
+                        return r;
                     });
                 }
                 // Shuffle the array (Fisher-Yates) so the order is random every time
