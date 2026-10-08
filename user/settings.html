@@ -585,16 +585,16 @@
                 districtData[pname].forEach(d => {
                     const dbtn = document.createElement('button');
                     dbtn.className = "w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group text-left";
-                    dbtn.innerHTML = \`
+                    dbtn.innerHTML = `
                         <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors shrink-0">
                             <i class="ph ph-map-pin"></i>
                         </div>
-                        <span class="font-medium text-gray-700 group-hover:text-orange-600">\${d.name}</span>
-                    \`;
+                        <span class="font-medium text-gray-700 group-hover:text-orange-600">${d.name}</span>
+                    `;
                     dbtn.onclick = () => {
                         currentLat = d.lat;
                         currentLng = d.lng;
-                        currentLocationName = \`\${d.name}, \${pname}\`;
+                        currentLocationName = `${d.name}, ${pname}`;
                         locationText.innerText = currentLocationName;
                         districtBtnText.innerText = d.name;
                         closeModal(districtModal, districtModalContentBox);
