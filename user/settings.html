@@ -112,15 +112,21 @@
                     </div>
                     <span class="text-lg font-medium text-gray-800 line-clamp-1" id="location-text">กำลังโหลด...</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button type="button" id="change-location-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-100 hover:text-gray-800 transition-all border border-gray-200 shadow-sm">
+                <div class="flex flex-col gap-2">
+                    <button type="button" id="change-location-btn" class="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-100 hover:text-gray-800 transition-all border border-gray-200 shadow-sm">
                         <i class="ph ph-crosshair text-lg"></i>
-                        ตำแหน่งปัจจุบัน
+                        ใช้ตำแหน่งปัจจุบัน (GPS)
                     </button>
-                    <button type="button" id="select-province-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-orange-50 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-100 hover:text-orange-700 transition-all border border-orange-200 shadow-sm">
-                        <i class="ph ph-map-trifold text-lg"></i>
-                        เลือกจังหวัด
-                    </button>
+                    <div class="flex gap-2">
+                        <button type="button" id="select-province-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-orange-50 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-100 hover:text-orange-700 transition-all border border-orange-200 shadow-sm">
+                            <i class="ph ph-map-trifold text-lg"></i>
+                            <span id="province-btn-text">เลือกจังหวัด</span>
+                        </button>
+                        <button type="button" id="select-district-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-400 rounded-xl text-sm font-medium transition-all border border-gray-200 shadow-sm cursor-not-allowed opacity-70" disabled>
+                            <i class="ph ph-map-pin text-lg"></i>
+                            <span id="district-btn-text">เลือกอำเภอ</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -240,6 +246,24 @@
                 </div>
                 <span class="font-medium text-gray-700 group-hover:text-orange-600">ประจวบคีรีขันธ์</span>
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- District Selection Modal -->
+<div id="district-modal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="bg-white rounded-3xl w-11/12 max-w-sm p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="district-modal-content-box">
+        <div class="flex justify-between items-center mb-5">
+            <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="ph ph-map-pin text-orange-500"></i>
+                เลือกอำเภอ/เขต
+            </h3>
+            <button type="button" id="close-district-modal" class="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 p-1.5 rounded-full">
+                <i class="ph ph-x text-lg"></i>
+            </button>
+        </div>
+        <div id="district-list" class="max-h-[60vh] overflow-y-auto space-y-2.5 mb-2 pr-1 custom-scrollbar">
+            <!-- Injected via JS -->
         </div>
     </div>
 </div>
@@ -455,41 +479,136 @@
 
     changeLocationBtn.addEventListener('click', fetchCurrentLocation);
 
+    // Data
+    const districtData = {
+        'กรุงเทพมหานคร': [
+            { name: 'ปทุมวัน', lat: 13.7367, lng: 100.5231 },
+            { name: 'วัฒนา', lat: 13.7423, lng: 100.5540 },
+            { name: 'สาทร', lat: 13.7088, lng: 100.5262 },
+            { name: 'บางรัก', lat: 13.7308, lng: 100.5238 },
+            { name: 'จตุจักร', lat: 13.8282, lng: 100.5594 }
+        ],
+        'เชียงใหม่': [
+            { name: 'เมืองเชียงใหม่', lat: 18.7953, lng: 98.9620 },
+            { name: 'หางดง', lat: 18.6875, lng: 98.9192 },
+            { name: 'แม่ริม', lat: 18.9145, lng: 98.9461 },
+            { name: 'สันทราย', lat: 18.8475, lng: 99.0435 }
+        ],
+        'ภูเก็ต': [
+            { name: 'เมืองภูเก็ต', lat: 7.8804, lng: 98.3923 },
+            { name: 'กะทู้', lat: 7.9176, lng: 98.3323 },
+            { name: 'ถลาง', lat: 8.0287, lng: 98.3347 }
+        ],
+        'ชลบุรี': [
+            { name: 'เมืองชลบุรี', lat: 13.3611, lng: 100.9847 },
+            { name: 'บางละมุง (พัทยา)', lat: 12.9754, lng: 100.9022 },
+            { name: 'ศรีราชา', lat: 13.1737, lng: 100.9311 }
+        ],
+        'นครราชสีมา': [
+            { name: 'เมืองนครราชสีมา', lat: 14.9799, lng: 102.0978 },
+            { name: 'ปากช่อง (เขาใหญ่)', lat: 14.7042, lng: 101.4162 }
+        ],
+        'ขอนแก่น': [
+            { name: 'เมืองขอนแก่น', lat: 16.4322, lng: 102.8236 },
+            { name: 'บ้านเป็ด', lat: 16.4334, lng: 102.7761 }
+        ],
+        'สงขลา': [
+            { name: 'เมืองสงขลา', lat: 7.1898, lng: 100.5954 },
+            { name: 'หาดใหญ่', lat: 7.0094, lng: 100.4735 }
+        ],
+        'ประจวบคีรีขันธ์': [
+            { name: 'เมืองประจวบคีรีขันธ์', lat: 11.8123, lng: 99.7972 },
+            { name: 'หัวหิน', lat: 12.5657, lng: 99.9579 }
+        ]
+    };
+
+    let currentSelectedProvince = '';
+
     // Province Modal Logic
     const selectProvinceBtn = document.getElementById('select-province-btn');
+    const provinceBtnText = document.getElementById('province-btn-text');
     const provinceModal = document.getElementById('province-modal');
     const provinceModalContent = document.getElementById('province-modal-content');
     const closeProvinceModalBtn = document.getElementById('close-province-modal');
     const provinceBtns = document.querySelectorAll('.province-btn');
 
-    function openModal() {
-        provinceModal.classList.remove('hidden');
-        // trigger reflow
-        void provinceModal.offsetWidth;
-        provinceModal.classList.remove('opacity-0', 'pointer-events-none');
-        provinceModalContent.classList.remove('scale-95');
-        provinceModalContent.classList.add('scale-100');
+    // District Modal Logic
+    const selectDistrictBtn = document.getElementById('select-district-btn');
+    const districtBtnText = document.getElementById('district-btn-text');
+    const districtModal = document.getElementById('district-modal');
+    const districtModalContentBox = document.getElementById('district-modal-content-box');
+    const closeDistrictModalBtn = document.getElementById('close-district-modal');
+    const districtList = document.getElementById('district-list');
+
+    function openModal(modal, box) {
+        modal.classList.remove('hidden');
+        void modal.offsetWidth;
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        box.classList.remove('scale-95');
+        box.classList.add('scale-100');
     }
 
-    function closeModal() {
-        provinceModal.classList.add('opacity-0', 'pointer-events-none');
-        provinceModalContent.classList.remove('scale-100');
-        provinceModalContent.classList.add('scale-95');
+    function closeModal(modal, box) {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        box.classList.remove('scale-100');
+        box.classList.add('scale-95');
         setTimeout(() => {
-            provinceModal.classList.add('hidden');
+            modal.classList.add('hidden');
         }, 300);
     }
 
-    selectProvinceBtn.addEventListener('click', openModal);
-    closeProvinceModalBtn.addEventListener('click', closeModal);
+    selectProvinceBtn.addEventListener('click', () => openModal(provinceModal, provinceModalContent));
+    closeProvinceModalBtn.addEventListener('click', () => closeModal(provinceModal, provinceModalContent));
+    
+    selectDistrictBtn.addEventListener('click', () => openModal(districtModal, districtModalContentBox));
+    closeDistrictModalBtn.addEventListener('click', () => closeModal(districtModal, districtModalContentBox));
 
     provinceBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            const pname = btn.dataset.name;
             currentLat = parseFloat(btn.dataset.lat);
             currentLng = parseFloat(btn.dataset.lng);
-            currentLocationName = btn.dataset.name;
-            locationText.innerText = currentLocationName;
-            closeModal();
+            currentSelectedProvince = pname;
+            currentLocationName = pname;
+            locationText.innerText = pname;
+            provinceBtnText.innerText = pname;
+            
+            // Enable district button
+            selectDistrictBtn.disabled = false;
+            selectDistrictBtn.classList.remove('bg-gray-100', 'text-gray-400', 'opacity-70', 'cursor-not-allowed');
+            selectDistrictBtn.classList.add('bg-orange-50', 'text-orange-600', 'hover:bg-orange-100', 'hover:text-orange-700', 'border-orange-200');
+            districtBtnText.innerText = 'เลือกอำเภอ';
+            
+            // Populate district list
+            districtList.innerHTML = '';
+            if (districtData[pname]) {
+                districtData[pname].forEach(d => {
+                    const dbtn = document.createElement('button');
+                    dbtn.className = "w-full flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl hover:bg-orange-50 hover:border-orange-200 hover:shadow-sm transition-all group text-left";
+                    dbtn.innerHTML = \`
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-colors shrink-0">
+                            <i class="ph ph-map-pin"></i>
+                        </div>
+                        <span class="font-medium text-gray-700 group-hover:text-orange-600">\${d.name}</span>
+                    \`;
+                    dbtn.onclick = () => {
+                        currentLat = d.lat;
+                        currentLng = d.lng;
+                        currentLocationName = \`\${d.name}, \${pname}\`;
+                        locationText.innerText = currentLocationName;
+                        districtBtnText.innerText = d.name;
+                        closeModal(districtModal, districtModalContentBox);
+                    };
+                    districtList.appendChild(dbtn);
+                });
+            }
+            
+            closeModal(provinceModal, provinceModalContent);
+            
+            // Automatically open district modal
+            setTimeout(() => {
+                openModal(districtModal, districtModalContentBox);
+            }, 350);
         });
     });
 
