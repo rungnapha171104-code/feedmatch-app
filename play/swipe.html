@@ -528,26 +528,13 @@
         // Initialize first card
         function renderCard() {
             if (likedCount >= MAX_LIKES) {
-                showWaitingScreen();
+                markUserReadyAndWait('max_likes');
                 return;
             }
 
             if (currentIndex >= foodData.length) {
                 // Out of cards
-                cardWrapper.className = "w-full max-w-2xl h-[65vh] max-h-[600px] bg-white rounded-3xl shadow-xl overflow-hidden relative border border-gray-100 flex flex-col items-center justify-center";
-                cardContent.innerHTML = `
-                    <div class="text-center p-8">
-                        <i class="ph-fill ph-hourglass-high text-6xl text-orange-400 mb-4 animate-pulse"></i>
-                        <h2 class="text-2xl font-bold text-gray-800 mb-2">ปัดครบทุกร้านแล้ว!</h2>
-                        <p class="text-gray-500">รอเพื่อนๆ โหวตสักครู่... ถ้ามีร้านที่ใจตรงกัน ระบบจะแจ้งเตือนทันที</p>
-                    </div>
-                `;
-                btnLike.disabled = true;
-                btnPass.disabled = true;
-                btnLike.classList.add('opacity-50');
-                btnPass.classList.add('opacity-50');
-                isWaitingForMatch = true;
-                checkAndCalculateMatch();
+                markUserReadyAndWait('out_of_cards');
                 return;
             }
             // Remove animation classes before resetting content
@@ -624,26 +611,49 @@
 
         let waitingInterval;
 
-        async function showWaitingScreen() {
+        async function markUserReadyAndWait(reason) {
+            isWaitingForMatch = true;
+            
+            // Mark user as ready in DB
+            await supabaseClient
+                .from('room_members')
+                .update({ is_ready: true })
+                .eq('room_id', roomId)
+                .eq('user_id', currentUser.id);
+
+            // Setup UI
             cardWrapper.className = "w-full max-w-2xl h-[65vh] max-h-[600px] bg-white rounded-3xl shadow-xl overflow-hidden relative border border-gray-100 flex flex-col items-center justify-center";
             
             // Check if match already exists
             const { data: existingMatch } = await supabaseClient.from('matches').select('*').eq('room_id', roomId);
             const hasMatch = existingMatch && existingMatch.length > 0;
 
+            let messageHTML = '';
+            if (reason === 'max_likes') {
+                messageHTML = `
+                    <i class="ph-fill ph-check-circle text-6xl text-green-500 mb-4"></i>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">เลือกครบ ${MAX_LIKES} ร้านแล้ว!</h2>
+                    <p id="waiting-text" class="text-gray-500 mb-6">กำลังประมวลผลผลลัพธ์ หรือรอเพื่อนๆ สักครู่...</p>
+                `;
+            } else {
+                messageHTML = `
+                    <i class="ph-fill ph-hourglass-high text-6xl text-orange-400 mb-4 animate-pulse"></i>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">ปัดครบทุกร้านแล้ว!</h2>
+                    <p id="waiting-text" class="text-gray-500 mb-6">รอเพื่อนๆ โหวตสักครู่... ถ้ามีร้านที่ใจตรงกัน ระบบจะแจ้งเตือนทันที</p>
+                `;
+            }
+
             cardContent.innerHTML = `
                 <div class="text-center p-8">
-                    <i class="ph-fill ph-check-circle text-6xl text-green-500 mb-4"></i>
-                    <h2 class="text-2xl font-bold text-gray-800 mb-2">เลือกครบ 5 ร้านแล้ว!</h2>
-                    <p id="waiting-text" class="text-gray-500 mb-6">กำลังประมวลผลผลลัพธ์ หรือรอเพื่อนๆ สักครู่...</p>
-                    ${hasMatch ? `<a href="spin.html?id=${roomId}" class="mt-4 px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-md inline-block">ดูผลลัพธ์อีกครั้ง</a>` : ''}
+                    ${messageHTML}
+                    ${hasMatch ? `<a href="spin.html?id=${roomId}" class="mt-4 px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-md inline-block">ดูผลลัพธ์</a>` : ''}
                 </div>
             `;
+            
             btnLike.disabled = true;
             btnPass.disabled = true;
             btnLike.classList.add('opacity-50');
             btnPass.classList.add('opacity-50');
-            isWaitingForMatch = true;
             
             if (!hasMatch) {
                 scheduleCheckMatch();
@@ -679,35 +689,35 @@
                 return;
             }
 
-            // Get all likes in this room
-            const { data: allSwipes, error } = await supabaseClient
+            // Get all ready status
+            const { data: membersStatus, error: memberError } = await supabaseClient
+                .from('room_members')
+                .select('is_ready')
+                .eq('room_id', roomId);
+
+            if (memberError || !membersStatus) return;
+
+            let finishedUsersCount = membersStatus.filter(m => m.is_ready).length;
+            // update memberCount in case it changed
+            memberCount = membersStatus.length || 1;
+
+            // Get all likes in this room to calculate match
+            const { data: allSwipes, error: swipeError } = await supabaseClient
                 .from('swipes')
                 .select('*')
                 .eq('room_id', roomId)
                 .eq('is_liked', true);
             
-            if (error) return;
+            if (swipeError) return;
 
-            const likesByUser = {};
             const likesByRestaurant = {};
-            
             allSwipes.forEach(s => {
-                likesByUser[s.user_id] = (likesByUser[s.user_id] || 0) + 1;
                 likesByRestaurant[s.restaurant_id] = (likesByRestaurant[s.restaurant_id] || 0) + 1;
             });
-
-            // Calculate finished users
-            let finishedUsersCount = 0;
-            for (let uid in likesByUser) {
-                if (likesByUser[uid] >= MAX_LIKES) {
-                    finishedUsersCount++;
-                }
-            }
 
             // Update UI
             const waitingText = document.getElementById('waiting-text');
             if (waitingText) {
-                // If memberCount is 1 (Solo), we don't need to show x/y people
                 if (memberCount > 1) {
                     waitingText.textContent = `รอเพื่อนๆ สักครู่... (เสร็จแล้ว ${finishedUsersCount}/${memberCount} คน)`;
                 } else {
@@ -720,9 +730,8 @@
                 if (waitingInterval) clearTimeout(waitingInterval);
                 await finalizeMatch(likesByRestaurant);
             } else {
-                // Group mode: wait until the total likes in the room >= memberCount * MAX_LIKES
-                let totalLikes = Object.values(likesByUser).reduce((a,b)=>a+b, 0);
-                if (totalLikes >= memberCount * MAX_LIKES) {
+                // Group mode: wait until all users are ready
+                if (finishedUsersCount >= memberCount) {
                     if (waitingInterval) clearTimeout(waitingInterval);
                     await finalizeMatch(likesByRestaurant);
                 }
