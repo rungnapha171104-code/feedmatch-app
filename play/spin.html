@@ -205,6 +205,7 @@
             // Set up Realtime for spins
             roomChannel = supabaseClient.channel('spin_room_' + roomId);
             roomChannel.on('broadcast', { event: 'spin_start' }, (payload) => {
+                if (payload.senderId === currentUser?.id) return; // Ignore own broadcast echo
                 startSpinningAnimation(payload.winnerId, payload.spinSequence);
             }).subscribe();
         });
@@ -223,7 +224,7 @@
             roomChannel.send({
                 type: 'broadcast',
                 event: 'spin_start',
-                payload: { winnerId: finalMatchId, spinSequence: spinSequence }
+                payload: { winnerId: finalMatchId, spinSequence: spinSequence, senderId: currentUser?.id }
             });
 
             // Start locally
@@ -349,7 +350,7 @@
             roomChannel.send({
                 type: 'broadcast',
                 event: 'spin_start',
-                payload: { winnerId: newWinner.id, spinSequence: spinSequence }
+                payload: { winnerId: newWinner.id, spinSequence: spinSequence, senderId: currentUser?.id }
             });
 
             // Start locally instantly
