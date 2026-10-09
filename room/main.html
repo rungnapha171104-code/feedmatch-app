@@ -251,7 +251,7 @@
         // Use upsert to join the new room without deleting history from old rooms
         const { error: memberError } = await supabaseClient
             .from('room_members')
-            .upsert([{ room_id: roomId, user_id: userId, is_ready: true }]);
+            .upsert([{ room_id: roomId, user_id: userId, is_ready: false }]);
             
         if (memberError) {
             alert('เกิดข้อผิดพลาดในการเข้าห้อง: ' + memberError.message);
@@ -295,7 +295,7 @@
         // Use upsert to join the new room without deleting history from old rooms
         const { error: memberError } = await supabaseClient
             .from('room_members')
-            .upsert([{ room_id: roomId, user_id: userId, is_ready: true }]);
+            .upsert([{ room_id: roomId, user_id: userId, is_ready: false }]);
             
         if (memberError) {
             alert('เกิดข้อผิดพลาดในการเข้าห้อง: ' + memberError.message);
