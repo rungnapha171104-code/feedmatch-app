@@ -99,6 +99,7 @@
         let isHost = false;
         let roomChannel;
         let usedWinnerIds = new Set();
+        let currentUser = null;
 
         // Initialize data
         document.addEventListener('DOMContentLoaded', async () => {
@@ -161,7 +162,7 @@
 
             // Fetch current user session
             const { data: { session } } = await supabaseClient.auth.getSession();
-            let currentUser = session ? session.user : null;
+            currentUser = session ? session.user : null;
 
             // Fetch room host
             const { data: roomData } = await supabaseClient
