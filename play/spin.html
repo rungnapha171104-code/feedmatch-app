@@ -203,25 +203,32 @@
             // Set up Realtime for spins
             roomChannel = supabaseClient.channel('spin_room_' + roomId);
             roomChannel.on('broadcast', { event: 'spin_start' }, (payload) => {
-                startSpinningAnimation(payload.winnerId);
+                startSpinningAnimation(payload.winnerId, payload.spinSequence);
             }).subscribe();
         });
 
         spinBtn.addEventListener('click', () => {
             if (!finalMatch || !isHost) return;
             
+            // Generate a synchronized spin sequence
+            const maxSpins = 30;
+            const spinSequence = [];
+            for (let i = 0; i < maxSpins; i++) {
+                spinSequence.push(Math.floor(Math.random() * candidates.length));
+            }
+            
             // Broadcast the event to others
             roomChannel.send({
                 type: 'broadcast',
                 event: 'spin_start',
-                payload: { winnerId: finalMatchId }
+                payload: { winnerId: finalMatchId, spinSequence: spinSequence }
             });
 
             // Start locally
-            startSpinningAnimation(finalMatchId);
+            startSpinningAnimation(finalMatchId, spinSequence);
         });
 
-        function startSpinningAnimation(winnerId) {
+        function startSpinningAnimation(winnerId, customSequence = null) {
             // Find the winner from candidates or fallback to finalMatch
             const winner = candidates.find(c => c.id === winnerId) || finalMatch;
             finalMatch = winner;
@@ -244,10 +251,24 @@
             let counter = 0;
             const maxSpins = 30; // number of rapid changes
             const speed = 70; // ms between changes
+            
+            // If sequence not provided (fallback), generate one
+            let sequence = customSequence;
+            if (!sequence || sequence.length === 0) {
+                sequence = [];
+                for (let i = 0; i < maxSpins; i++) {
+                    sequence.push(Math.floor(Math.random() * candidates.length));
+                }
+            }
 
             spinInterval = setInterval(() => {
-                // Pick a random item from ALL original candidates to keep the visual effect intense
-                let randomItem = candidates[Math.floor(Math.random() * candidates.length)];
+                // Pick item from the synchronized sequence
+                const itemIndex = sequence[counter] !== undefined ? sequence[counter] : Math.floor(Math.random() * candidates.length);
+                let randomItem = candidates[itemIndex];
+                
+                // Safety fallback if index out of bounds
+                if (!randomItem) randomItem = candidates[0];
+                
                 resultText.textContent = randomItem.name;
                 
                 counter++;
@@ -311,15 +332,22 @@
 
             const newWinner = remainingCandidates[Math.floor(Math.random() * remainingCandidates.length)];
             
+            // Generate a synchronized spin sequence
+            const maxSpins = 30;
+            const spinSequence = [];
+            for (let i = 0; i < maxSpins; i++) {
+                spinSequence.push(Math.floor(Math.random() * candidates.length));
+            }
+            
             // Broadcast the event immediately so everyone sees it start at the same time
             roomChannel.send({
                 type: 'broadcast',
                 event: 'spin_start',
-                payload: { winnerId: newWinner.id }
+                payload: { winnerId: newWinner.id, spinSequence: spinSequence }
             });
 
             // Start locally instantly
-            startSpinningAnimation(newWinner.id);
+            startSpinningAnimation(newWinner.id, spinSequence);
 
             // Update DB in the background (no await) so others see the new match too if they reload
             if (roomId) {
