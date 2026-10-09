@@ -204,7 +204,8 @@
 
             // Set up Realtime for spins
             roomChannel = supabaseClient.channel('spin_room_' + roomId);
-            roomChannel.on('broadcast', { event: 'spin_start' }, (payload) => {
+            roomChannel.on('broadcast', { event: 'spin_start' }, (event) => {
+                const payload = event.payload;
                 if (payload.senderId === currentUser?.id) return; // Ignore own broadcast echo
                 startSpinningAnimation(payload.winnerId, payload.spinSequence);
             }).subscribe();
