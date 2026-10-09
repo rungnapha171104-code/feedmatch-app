@@ -147,8 +147,8 @@
                     }
                 });
                 candidates = Array.from(uniqueRestaurants.values());
-                // Sort candidates to guarantee identical array indices across all clients for synchronized animation
-                candidates.sort((a, b) => a.id - b.id);
+                // Sort candidates to guarantee identical array indices across all clients for synchronized animation (works for UUIDs and Integers)
+                candidates.sort((a, b) => String(a.id).localeCompare(String(b.id)));
             } else {
                 candidates = [
                     { id: 1, name: "สเต็กเนื้อวากิว" },

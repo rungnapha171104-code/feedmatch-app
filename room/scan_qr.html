@@ -99,21 +99,25 @@
 
             // Success Callback
             const onScanSuccess = (decodedText, decodedResult) => {
-                // Handle the scanned code (e.g. FM-123456)
                 console.log(`Scan result: ${decodedText}`);
                 
-                // Play a brief success haptic/sound feedback if available
                 if (window.navigator && window.navigator.vibrate) {
                     window.navigator.vibrate(100);
                 }
 
+                let redirectUrl = 'join.html';
+                if (decodedText.startsWith('http')) {
+                    redirectUrl = decodedText;
+                } else {
+                    // In case the QR code only contains the room code string
+                    redirectUrl = `join.html?code=${encodeURIComponent(decodedText.trim())}`;
+                }
+
                 // Stop the scanner to save battery and freeze frame
                 html5QrCode.stop().then(() => {
-                    // Redirect to lobby
-                    window.location.href = 'lobby.html';
+                    window.location.href = redirectUrl;
                 }).catch((err) => {
-                    // If stop fails, redirect anyway
-                    window.location.href = 'lobby.html';
+                    window.location.href = redirectUrl;
                 });
             };
 
