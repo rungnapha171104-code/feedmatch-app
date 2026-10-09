@@ -147,6 +147,8 @@
                     }
                 });
                 candidates = Array.from(uniqueRestaurants.values());
+                // Sort candidates to guarantee identical array indices across all clients for synchronized animation
+                candidates.sort((a, b) => a.id - b.id);
             } else {
                 candidates = [
                     { id: 1, name: "สเต็กเนื้อวากิว" },
@@ -247,6 +249,10 @@
             // Reset text styling
             resultText.classList.remove('text-orange-500', 'scale-110');
             resultText.classList.add('text-gray-800');
+
+            if (spinInterval) {
+                clearInterval(spinInterval);
+            }
 
             let counter = 0;
             const maxSpins = 30; // number of rapid changes
