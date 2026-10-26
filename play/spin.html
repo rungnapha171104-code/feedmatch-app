@@ -206,10 +206,32 @@
             // Set up Realtime for spins
             roomChannel = supabaseClient.channel('spin_room_' + roomId);
             roomChannel.on('broadcast', { event: 'spin_start' }, (event) => {
-                const payload = event.payload;
-                if (payload.senderId === currentUser?.id) return; // Ignore own broadcast echo
-                startSpinningAnimation(payload.winnerId, payload.spinSequence);
+                const data = (event && event.payload) ? event.payload : (event || {});
+                const senderId = data.senderId;
+                const winnerId = data.winnerId;
+                const spinSequence = data.spinSequence;
+                
+                if (senderId && currentUser?.id && senderId === currentUser.id) return; // Ignore own broadcast echo
+                if (winnerId) {
+                    startSpinningAnimation(winnerId, spinSequence);
+                }
             }).subscribe();
+
+            // Backup sync via Postgres Changes on matches table (if broadcast packet is missed)
+            supabaseClient
+                .channel('spin_matches_sync_' + roomId)
+                .on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'matches', 
+                    filter: `room_id=eq.${roomId}` 
+                }, (payload) => {
+                    const newMatchId = payload.new?.restaurant_id;
+                    if (!isHost && newMatchId && newMatchId !== finalMatchId) {
+                        startSpinningAnimation(newMatchId);
+                    }
+                })
+                .subscribe();
         });
 
         spinBtn.addEventListener('click', () => {
@@ -231,6 +253,16 @@
                 });
             } catch (err) {
                 console.error("Broadcast failed:", err);
+            }
+
+            // Also update matches in DB as trigger for postgres_changes fallback on friend side
+            if (roomId) {
+                supabaseClient.from('matches')
+                    .update({ restaurant_id: finalMatchId })
+                    .eq('room_id', roomId)
+                    .then(({error}) => {
+                        if (error) console.error("Error updating match on initial spin:", error);
+                    });
             }
 
             // Start locally
@@ -318,10 +350,7 @@
             } else {
                 resetBtn.classList.add('hidden');
             }
-
-
         }
-
 
         document.getElementById('close-btn').addEventListener('click', async (e) => {
             e.preventDefault();
@@ -335,12 +364,23 @@
             e.preventDefault();
             if (!isHost) return;
             
-            // Pick a new winner randomly from remaining candidates that haven't won yet
-            const remainingCandidates = candidates.filter(c => !usedWinnerIds.has(c.id));
+            // กรองร้านที่ยังไม่ได้ถูกสุ่มในรอบนี้
+            let remainingCandidates = candidates.filter(c => !usedWinnerIds.has(c.id));
+
+            // หากสุ่มจนครบทุกร้านแล้ว ให้เริ่มวนลูปใหม่ (Loop) ได้เรื่อยๆ ไม่มีวันหมด
+            if (remainingCandidates.length === 0) {
+                usedWinnerIds.clear();
+                // ถ้ามีร้านมากกว่า 1 ร้าน ให้กันร้านที่เพิ่งได้ล่าสุดออกไปก่อน เพื่อไม่ให้สุ่มได้ร้านเดิมซ้ำติดกัน
+                if (candidates.length > 1 && finalMatchId) {
+                    usedWinnerIds.add(finalMatchId);
+                    remainingCandidates = candidates.filter(c => c.id !== finalMatchId);
+                } else {
+                    remainingCandidates = [...candidates];
+                }
+            }
 
             if (remainingCandidates.length === 0) {
-                alert("ไม่มีร้านอาหารเหลือให้สุ่มแล้วครับ! (สุ่มครบทุกร้านที่โหวตแล้ว)");
-                return;
+                remainingCandidates = [...candidates];
             }
 
             const newWinner = remainingCandidates[Math.floor(Math.random() * remainingCandidates.length)];
@@ -366,7 +406,7 @@
             // Start locally instantly
             startSpinningAnimation(newWinner.id, spinSequence);
 
-            // Update DB in the background (no await) so others see the new match too if they reload
+            // Update DB in the background (no await) so others see the new match too if they reload or via realtime
             if (roomId) {
                 supabaseClient.from('matches')
                     .update({ restaurant_id: newWinner.id })
